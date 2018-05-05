@@ -232,26 +232,15 @@ void FASTCALL Vdp2ColorRamWriteLong(u32 addr, u32 val) {
 
      const u32 base_addr = addr;
      T2WriteLong(Vdp2ColorRam, base_addr, val);
-     if (Vdp2Internal.ColorMode == 2) {
-       YglOnUpdateColorRamWord(base_addr);
-     }
-     else {
-       YglOnUpdateColorRamWord(base_addr + 2);
-       YglOnUpdateColorRamWord(base_addr);
-     }
+     YglOnUpdateColorRamWord(base_addr + 2);
+     YglOnUpdateColorRamWord(base_addr);
 
      if (addr < 0x800) {
        const u32 mirror_addr = base_addr + 0x800;
        T2WriteLong(Vdp2ColorRam, mirror_addr, val);
-       if (Vdp2Internal.ColorMode == 2) {
-         YglOnUpdateColorRamWord(mirror_addr);
-       }
-       else {
-         YglOnUpdateColorRamWord(mirror_addr + 2);
-         YglOnUpdateColorRamWord(mirror_addr);
-       }
+       YglOnUpdateColorRamWord(mirror_addr + 2);
+       YglOnUpdateColorRamWord(mirror_addr);
      }
-
    }
    else {
      T2WriteLong(Vdp2ColorRam, addr, val);
@@ -1142,11 +1131,12 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
       case 0x00E:
          Vdp2Regs->RAMCTL = val;
          if (Vdp2Internal.ColorMode != ((val >> 12) & 0x3) ) {
+           Vdp2Internal.ColorMode = (val >> 12) & 0x3;
            for (int i = 0; i < 0x1000; i += 2) {
              YglOnUpdateColorRamWord(i);
            }
          }
-         Vdp2Internal.ColorMode = (val >> 12) & 0x3;
+         
          return;
       case 0x010:
          Vdp2Regs->CYCA0L = val;
