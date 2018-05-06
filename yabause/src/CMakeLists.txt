@@ -905,7 +905,7 @@ endmacro(yab_port_stop)
 
 macro(yab_port_success YAB_TARGET)
 	if (NOT YAB_MULTIBUILD)
-		set_target_properties(${YAB_TARGET} PROPERTIES OUTPUT_NAME yabause)
+		set_target_properties(${YAB_TARGET} PROPERTIES OUTPUT_NAME yabasanshiro)
 		set(YAB_PORT_NAME "yabause")
 	else ()
 		set(YAB_PORT_NAME ${YAB_TARGET})
