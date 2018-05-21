@@ -38,6 +38,8 @@
 #include "threads.h"
 #include "yui.h"
 #include "frameprofile.h"
+#include "vidogl.h"
+#include "vidsoft.h"
 
 u8 * Vdp2Ram;
 u8 * Vdp2ColorRam;
@@ -831,11 +833,31 @@ void vdp2VBlankOUT(void) {
   if (skipnextframe && (!saved))
   {
     saved = VIDCore;
-    VIDCore = &VIDDummy;
+    //VIDCore = &VIDDummy;
+
+
+    
+    VIDCore->Vdp2DrawStart = VIDDummy.Vdp2DrawStart;
+    VIDCore->Vdp2DrawEnd   = VIDDummy.Vdp2DrawEnd;
+    VIDCore->Vdp2DrawScreens = VIDDummy.Vdp2DrawScreens;
+
   }
   else if (saved && (!skipnextframe))
   {
-    VIDCore = saved;
+    //VIDCore = saved;
+    if( saved != NULL ){
+
+      if (VIDCore->id == VIDCORE_OGL) {
+        VIDCore->Vdp2DrawStart = VIDOGLVdp2DrawStart;
+        VIDCore->Vdp2DrawEnd = VIDOGLVdp2DrawEnd;
+        VIDCore->Vdp2DrawScreens = VIDOGLVdp2DrawScreens;
+      }
+      else if (VIDCore->id == VIDCORE_SOFT ) {
+        VIDCore->Vdp2DrawStart = VIDSoftVdp2DrawStart;
+        VIDCore->Vdp2DrawEnd = VIDSoftVdp2DrawEnd;
+        VIDCore->Vdp2DrawScreens = VIDSoftVdp2DrawScreens;
+      }
+    }
     saved = NULL;
   }
 
