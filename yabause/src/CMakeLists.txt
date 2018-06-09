@@ -322,11 +322,11 @@ if (YAB_WANT_OPENGL AND (YAB_RGB STREQUAL ""))
 		endif()
 		string(COMPARE EQUAL ${YAB_PORTS} "glfw" glfw)
 		if( glfw )
-			include( ../CMake/Packages/external_curl.cmake )
-			set(yabause_SOURCES ${yabause_SOURCES}
-				test_framework.cpp
-				test_framework.h
-			)
+			#include( ../CMake/Packages/external_curl.cmake )
+			#set(yabause_SOURCES ${yabause_SOURCES}
+			#	test_framework.cpp
+			#	test_framework.h
+			#)
 			add_definitions(-DYAB_ASYNC_RENDERING)
 		endif()
 		add_definitions(-D_OGL3_)

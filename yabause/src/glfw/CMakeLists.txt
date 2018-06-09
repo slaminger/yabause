@@ -4,10 +4,13 @@ project(yabause-glfw)
 
 yab_port_start()
 
+# sudo apt-get install libx11-dev libxrandr-dev libxxf86vm-dev libxcursor-dev  libxinerama-dev  libxi-dev
+
 ### Load External Project
 include(ExternalProject)
 
 find_package(GLFW 3.2 QUIET)
+add_definitions(-DHAVE_LIBGL)
 
 if(GLFW_FOUND)
     message(STATUS "Found GLFW")
@@ -76,7 +79,7 @@ include( external_libpng.cmake )
 
 set(YABAUSE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
 set(PORT_INCLUDE_DIRS ${GLFW_INCLUDE_DIR} ${png_INSTALL}/include/ ${ZLIB_INSTALL}/include/ )
-set(PORT_LIBRARIES ${GLFW_LIBRARIES} ${png_STATIC_LIBRARIES} ${zlib_STATIC_LIBRARIES} ${CURL_LIBRARIES} )
+set(PORT_LIBRARIES ${GLFW_LIBRARIES} ${png_STATIC_LIBRARIES} ${zlib_STATIC_LIBRARIES}  )
 include_directories( ${YABAUSE_INCLUDE_DIR}  ${PORT_INCLUDE_DIRS})
 set(yabause_glfw_SOURCES
   main.cpp

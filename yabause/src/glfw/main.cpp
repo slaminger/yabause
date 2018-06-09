@@ -15,7 +15,7 @@
 using std::map;
 using std::string;
 
-#include "test_framework.h"
+//#include "test_framework.h"
 
 map< int , int > g_Keymap;
 
@@ -125,7 +125,7 @@ OSD_struct *OSDCoreList[] = {
 #endif
 
 GLFWwindow* g_window = NULL;
-TestFramework * test_fw_ = nullptr;
+//TestFramework * test_fw_ = nullptr;
 
 void DrawDebugInfo()
 {
@@ -149,6 +149,7 @@ void YuiSwapBuffers(void)
   t = glfwGetTime();
   dt = t - prevt;
   prevt = t;
+/*
   if (test_fw_ != nullptr) {
     if (test_fw_->step_in_draw_thread() == TestFramework::FINISHED) {
       printf("TestFramework::FINISHED\n");
@@ -158,8 +159,9 @@ void YuiSwapBuffers(void)
     test_fw_->onStartFrame();
   }
   else {
+*/
     glfwSwapBuffers(g_window);
-  }
+ // }
   SetOSDToggle(0);
 }
 
@@ -305,9 +307,9 @@ int main( int argc, char * argcv[] )
   glfwWindowHint(GLFW_BLUE_BITS,8);
   glfwWindowHint(GLFW_STENCIL_BITS,8);
 
-  //glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-  //glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 
   g_window = glfwCreateWindow(width, height, "My Title", NULL, NULL);
   if (!g_window)
@@ -361,7 +363,7 @@ int main( int argc, char * argcv[] )
       test_target = sarg.substr(pos + 12);
     }
   }
-
+/*
   if (test_path != "") {
     test_fw_ = new TestFramework();
     if (test_fw_->load("Yaba Sanshiro", test_path) != 0) {
@@ -371,17 +373,17 @@ int main( int argc, char * argcv[] )
     test_fw_->setSaveScreenShotCallback(saveScreenshot);
     test_fw_->setTarget(test_target);
   }
-
+*/
   glfwSetTime(0);
   double prevt = glfwGetTime();
 
   while (!glfwWindowShouldClose(g_window)) {
-    if (test_fw_ != nullptr) {
-      if (test_fw_->step_in_main_thread() == TestFramework::FINISHED) {
-        printf("TestFramework::FINISHED\n");
-        exit(0);
-      }
-    }
+//    if (test_fw_ != nullptr) {
+//      if (test_fw_->step_in_main_thread() == TestFramework::FINISHED) {
+//       printf("TestFramework::FINISHED\n");
+//      exit(0);
+//   }
+//    }
     YabauseExec(); // exec one frame
     glfwPollEvents();
   }

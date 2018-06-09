@@ -7268,7 +7268,6 @@ void VIDOGLSetFilterMode(int type) {
   return;
 }
 
-#endif
 
 void VIDOGLSetSettingValueMode(int type, int value) {
 
@@ -7290,4 +7289,6 @@ void VIDOGLSetSettingValueMode(int type, int value) {
 
   return;
 }
+
+#endif
 
