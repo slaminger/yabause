@@ -48,7 +48,7 @@
 #include "vdp2.h"
 #include "yui.h"
 #include "bios.h"
-#include "movie.h"
+//#include "movie.h"
 #include "osdcore.h"
 #ifdef HAVE_LIBSDL
 #if defined(__APPLE__) || defined(GEKKO)
@@ -522,15 +522,14 @@ void YabauseResetButton(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 int YabauseExec(void) {
-
 	//automatically advance lag frames, this should be optional later
-	if (FrameAdvanceVariable > 0 && LagFrameFlag == 1){ 
-		FrameAdvanceVariable = NeedAdvance; //advance a frame
+	//if (FrameAdvanceVariable > 0 && LagFrameFlag == 1){ 
+		//FrameAdvanceVariable = NeedAdvance; //advance a frame
 		YabauseEmulate();
-		FrameAdvanceVariable = Paused; //pause next time
+		//FrameAdvanceVariable = Paused; //pause next time
 		return(0);
-	}
-
+	//}
+/*
 	if (FrameAdvanceVariable == Paused){
 		ScspMuteAudio(SCSP_MUTE_SYSTEM);
 		return(0);
@@ -546,6 +545,7 @@ int YabauseExec(void) {
 		ScspUnMuteAudio(SCSP_MUTE_SYSTEM);	
 		YabauseEmulate();
 	}
+*/
 	return 0;
 }
 

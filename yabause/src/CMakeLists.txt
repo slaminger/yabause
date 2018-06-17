@@ -296,8 +296,8 @@ if (YAB_WANT_OPENGL AND (YAB_RGB STREQUAL ""))
 	include(FindOpenGL)
 	if (OPENGL_FOUND)
 		add_definitions(-DHAVE_LIBGL=1)
-		set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${OPENGL_LIBRARIES})
-
+		#set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${OPENGL_LIBRARIES})
+		set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} EGL GLESv2)
 		include_directories(./ ./nanovg)
 		set(yabause_SOURCES ${yabause_SOURCES} 
 			nanovg/nanovg.c 
@@ -315,13 +315,14 @@ if (YAB_WANT_OPENGL AND (YAB_RGB STREQUAL ""))
 		endif()
 
 		# glXGetProcAddress
-		set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${OPENGL_LIBRARIES})
-		check_function_exists(glXGetProcAddress GLXGETPROCADDRESS_OK)
-		if (GLXGETPROCADDRESS_OK)
-			add_definitions(-DHAVE_GLXGETPROCADDRESS=1)
-		endif()
+		#set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${OPENGL_LIBRARIES})
+		#check_function_exists(glXGetProcAddress GLXGETPROCADDRESS_OK)
+		#if (GLXGETPROCADDRESS_OK)
+		#	add_definitions(-DHAVE_GLXGETPROCADDRESS=1)
+		#endif()
 		string(COMPARE EQUAL ${YAB_PORTS} "glfw" glfw)
 		if( glfw )
+			add_definitions(-D_OGLES3_)
 			#include( ../CMake/Packages/external_curl.cmake )
 			#set(yabause_SOURCES ${yabause_SOURCES}
 			#	test_framework.cpp
@@ -329,7 +330,7 @@ if (YAB_WANT_OPENGL AND (YAB_RGB STREQUAL ""))
 			#)
 			add_definitions(-DYAB_ASYNC_RENDERING)
 		endif()
-		add_definitions(-D_OGL3_)
+		#add_definitions(-D_OGL3_)
 		if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 			add_definitions(-D_OGLES3_)
 			set(yabause_SOURCES ${yabause_SOURCES} 
@@ -338,21 +339,21 @@ if (YAB_WANT_OPENGL AND (YAB_RGB STREQUAL ""))
 				yglshaderes.c
 			)
 		endif()
-        include(FindGLEW)
-        add_definitions(-D_USEGLEW_)
-        if (GLEW_FOUND)
-            include_directories( ${GLEW_INCLUDE_DIRS})
-            set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${GLEW_LIBRARIES})
-        else()
-		    add_definitions(-DGLEW_STATIC)
-		    include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/gllibs/include/ )
-			set(yabause_SOURCES
-				${yabause_SOURCES}
-				gllibs/glew/glew.c
-				yglcache.c
-				ygles.c
-				yglshaderes.c )
-		endif()
+#        include(FindGLEW)
+        #add_definitions(-D_USEGLEW_)
+        #if (GLEW_FOUND)
+        #    include_directories( ${GLEW_INCLUDE_DIRS})
+        #    set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${GLEW_LIBRARIES})
+        #else()
+	#	    add_definitions(-DGLEW_STATIC)
+	#	    include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/gllibs/include/ )
+	#		set(yabause_SOURCES
+	#			${yabause_SOURCES}
+	#			gllibs/glew/glew.c
+#				yglcache.c
+#				ygles.c
+#				yglshaderes.c )
+#		endif()
 	endif(OPENGL_FOUND)
 endif ()
 

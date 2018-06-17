@@ -179,11 +179,14 @@ extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
     #include <OpenGL/gl3.h>
 
 #else // Linux?
-    #if defined(_OGLES3_)||defined(_OGL3_)
+    #if defined(_OGL3_)
         #define GL_GLEXT_PROTOTYPES 1
         #define GLX_GLXEXT_PROTOTYPES 1
         #include <GL/glew.h>
         #include <GL/gl.h>
+    #elif defined(_OGLES3_)
+	#include <EGL/egl.h>
+	#include <GLES3/gl32.h>
     #else
         #include <GL/gl.h>
     #endif

@@ -19,7 +19,7 @@ else()
 
     ExternalProject_Add(glfw PREFIX glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
-        GIT_TAG 3.2
+        GIT_TAG 244d6d782375f4277123e43c5dc2ede7d41aa4f0
 
         UPDATE_COMMAND ""
 
@@ -87,7 +87,7 @@ set(yabause_glfw_SOURCES
 )
 
 add_executable(yabause-glfw ${yabause_glfw_SOURCES})
-target_link_libraries(yabause-glfw yabause  ${YABAUSE_LIBRARIES} ${PORT_LIBRARIES}  )
+target_link_libraries(yabause-glfw yabause  EGL GLESv2 ${YABAUSE_LIBRARIES} ${PORT_LIBRARIES}  )
 
 yab_port_success(yabause-glfw)
 configure_file(yabause.desktop.in ${YAB_PORT_NAME}.desktop)
