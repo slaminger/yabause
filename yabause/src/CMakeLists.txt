@@ -34,6 +34,8 @@ option(YAB_MULTIBUILD "Choose wether to build all ports or only a single one")
 set(YAB_PORT_BUILT FALSE)
 set(YAB_PORTS "qt" CACHE STRING "List of ports to build")
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fomit-frame-pointer")
+add_definitions(-DYAB_ASYNC_RENDERING)
 		
 set(yabause_SOURCES
 	bios.c
@@ -833,8 +835,12 @@ if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv5tel")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${YAB_OPTIMIZATION}")
 endif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv5tel")
 if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv7l")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -mcpu=cortex-a8 -mfpu=vfp -mfloat-abi=hard")
-    set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -O3 -mcpu=cortex-a8 -mfpu=vfp -mfloat-abi=hard")
+    #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -mcpu=cortex-a8 -mfpu=vfp -mfloat-abi=hard")
+    #set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -O3 -mcpu=cortex-a8 -mfpu=vfp -mfloat-abi=hard")
+
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fomit-frame-pointer -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4")
+    set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -O3 -fomit-frame-pointer -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4")
+
 endif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv7l")
 if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv7-a")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -march=armv7ve -mcpu=cortex-a15 -mfpu=neon -fno-math-errno -ffast-math")
