@@ -1,5 +1,8 @@
 #include <exception>
 #include <functional>
+#include <string>
+#include <vector>
+
 #include <SDL2/SDL.h>
 #define GL_GLEXT_PROTOTYPES 1
 #include <SDL2/SDL_opengles2.h>
@@ -23,8 +26,8 @@ extern "C" {
 #include "osdcore.h"
 #include "ygl.h"
 
-static char * biospath = "/home/pigaming/RetroPie/BIOS/segasaturn/bios.bin";
-static char cdpath[256] = "/home/pigaming/RetroPie/roms/segasaturn/nights.cue";
+static char biospath[256] = "/home/pigaming/RetroPie/BIOS/saturn/bios.bin";
+static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/nights.cue";
 static char buppath[256] = "./back.bin";
 static char mpegpath[256] = "\0";
 static char cartpath[256] = "\0";
@@ -123,6 +126,12 @@ int YuiUseOGLOnThisThread(){
 
 }
 
+int g_resolution_mode = 0;
+int g_keep_aspect_rate = 0;
+int g_scsp_sync = 1;
+int g_frame_skip = 0;
+int g_emulated_bios = 1;
+
 int yabauseinit()
 {
   int res;
@@ -145,20 +154,26 @@ int yabauseinit()
   yinit.cdcoretype = CDCORE_ISO;
   yinit.carttype = CART_NONE;
   yinit.regionid = 0;
-  yinit.biospath = biospath;
+  if( g_emulated_bios ){
+    yinit.biospath = NULL;
+  }else{
+    yinit.biospath = biospath;
+  }
   yinit.cdpath = cdpath;
   yinit.buppath = buppath;
   yinit.mpegpath = mpegpath;
   yinit.cartpath = cartpath;
   yinit.videoformattype = VIDEOFORMATTYPE_NTSC;
-  yinit.frameskip = 0;
+  yinit.frameskip = g_frame_skip;
   yinit.usethreads = 0;
   yinit.skip_load = 0;    
   yinit.video_filter_type = 0;
   yinit.polygon_generation_mode = PERSPECTIVE_CORRECTION; ////GPU_TESSERATION;
   yinit.use_new_scsp = 1;
-  yinit.resolution_mode = 0;
+  yinit.resolution_mode = g_resolution_mode;
   yinit.rotate_screen = 0;
+  yinit.scsp_sync_count_per_frame = g_scsp_sync;
+  yinit.extend_backup = 1;
 
     res = YabauseInit(&yinit);
     if( res == -1)
@@ -191,66 +206,128 @@ int yabauseinit()
   return 0;
 }
 
+using std::string;
 
 int main(int argc, char** argv)
 {
+
+  std::string current_exec_name = argv[0]; // Name of the current exec program
+  std::vector<std::string> all_args;
+  if (argc > 1) {
+    all_args.assign(argv + 1, argv + argc);
+    if( all_args[0] == "-h" || all_args[0] == "--h" ){
+      printf("Usage:\n");
+      printf("  -b STRING  --bios STRING                 bios file\n");
+      printf("  -i STRING  --iso STRING                  iso/cue file\n");
+      printf("  -r NUMBER  --resolution_mode NUMBER      0 .. Native, 1 .. 4x, 2 .. 2x, 3 .. Original\n");
+      printf("  -a         --keep_aspect_rate\n");
+      printf("  -s NUMBER  --scps_sync_per_frame NUMBER\n");
+      printf("  -f         --frame_skip\n");    
+      printf("  -v         --version\n");    
+      exit(0);
+    }
+  }
+
+  for( int i=0; i<all_args.size(); i++ ){
+    string x = all_args[i];
+		if(( x == "-b" || x == "--bios") && (i+1<all_args.size() ) ) {
+      g_emulated_bios = 0;
+      strncpy(biospath, all_args[i+1].c_str(), 256);
+    }
+		else if(( x == "-i" || x == "--iso") && (i+1<all_args.size() ) ) {
+      strncpy(cdpath, all_args[i+1].c_str(), 256);
+    }
+		else if(( x == "-r" || x == "--resolution_mode") && (i+1<all_args.size() ) ) {
+      g_resolution_mode = std::stoi( all_args[i+1] );
+    }
+		else if(( x == "-a" || x == "--keep_aspect_rate") ) {
+      g_keep_aspect_rate = 1;
+    }
+		else if(( x == "-s" || x == "--g_scsp_sync")&& (i+1<all_args.size() ) ) {
+      g_scsp_sync = std::stoi( all_args[i+1] );
+    }
+		else if(( x == "-f" || x == "--frame_skip") ) {
+      g_frame_skip = 1;
+    }
+		else if(( x == "-v" || x == "--version") ) {
+      printf("YabaSanshiro version %s(%s)\n",YAB_VERSION, GIT_SHA1 );
+      exit(0);
+    }
+	}
+  SDL_DisplayMode dsp;
   int width = 800;
   int height = 600;
- wnd = SDL_CreateWindow("test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-      width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
-
+  wnd = SDL_CreateWindow("test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+      width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
+  SDL_GetWindowDisplayMode(wnd,&dsp);
+  dsp.refresh_rate = 60;
+  SDL_SetWindowDisplayMode(wnd,&dsp);
+  SDL_GetWindowSize(wnd,&width,&height);
   SDL_SetWindowInputFocus(wnd);
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-    SDL_GL_SetSwapInterval(0);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+  SDL_GL_SetSwapInterval(0);
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   glc = SDL_GL_CreateContext(wnd);
-  //auto rdr = SDL_CreateRenderer(
-  //      wnd, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
   printf("context renderer string: \"%s\"\n", glGetString(GL_RENDERER));
   printf("context vendor string: \"%s\"\n", glGetString(GL_VENDOR));
   printf("version string: \"%s\"\n", glGetString(GL_VERSION));
   printf("Extentions: %s\n",glGetString(GL_EXTENSIONS));
 
-  if( yabauseinit() == -1 )
-  {
+  if( yabauseinit() == -1 ) {
       return -1;
   }
-  VIDCore->Resize(0,0,width,height,0);
-  SDL_GL_MakeCurrent(wnd,nullptr);
-    while(true)
-    {
-        SDL_Event e;
-        while(SDL_PollEvent(&e))
-        {
-            if(e.type == SDL_QUIT) std::terminate();
 
-            switch( e.type ){
-            /* Keyboard event */
-            /* Pass the event data onto PrintKeyInfo() */
-            case SDL_KEYDOWN:
-              PerKeyDown( e.key.keysym.sym );
-              break;
-            case SDL_KEYUP:
-              PerKeyUp( e.key.keysym.sym );
-              break;
-            default:
-              break;
-            }
-        }
-
-        YabauseExec(); // exec one frame
-        // Clear the screen to black
-        //glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-        //glClear(GL_COLOR_BUFFER_BIT);
-        //SDL_GL_SwapWindow(wnd);
-        // Draw a triangle from the 3 vertices
-        //glDrawArrays(GL_TRIANGLES, 0, 3);
+  if( g_keep_aspect_rate ){
+    int originx = 0;
+    int originy = 0;
+    int specw = width;
+    int spech = height;
+    float specratio = (float)specw / (float)spech;
+    int saturnw = 4;
+    int saturnh = 3;
+    float saturnraito = (float)saturnw/ (float)saturnh;
+    float revraito = (float) saturnh/ (float)saturnw;
+    if( specratio > saturnraito ){
+            width = spech * saturnraito;
+            height = spech;
+            originx = (dsp.w - width)/2.0;
+            originy = 0;
+    }else{
+        width = specw ;
+        height = specw * revraito;
+        originx = 0;
+        originy = spech - height;
     }
-    YabauseDeInit();
-
-    return 0;
+    VIDCore->Resize(originx,originy,width,height,0);
+  }else{
+    VIDCore->Resize(0,0,width,height,0);
+  }
+  SDL_GL_MakeCurrent(wnd,nullptr);
+  glClearColor(0.0,0.0,0.0,1.0);
+  glClear(GL_COLOR_BUFFER_BIT);
+  YabThreadSetCurrentThreadAffinityMask(0x00);
+  while(true) {
+    SDL_Event e;
+    while(SDL_PollEvent(&e)) {
+      if(e.type == SDL_QUIT) std::terminate();
+      switch( e.type ){
+        /* Keyboard event */
+        /* Pass the event data onto PrintKeyInfo() */
+      case SDL_KEYDOWN:
+        PerKeyDown( e.key.keysym.sym );
+        break;
+      case SDL_KEYUP:
+        PerKeyUp( e.key.keysym.sym );
+        break;
+      default:
+        break;
+      }
+    }
+    YabauseExec(); // exec one frame
+  }
+  YabauseDeInit();
+  SDL_Quit();
+  return 0;
 }

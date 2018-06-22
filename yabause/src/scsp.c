@@ -5523,6 +5523,29 @@ void ScspAsynMain( void * p ){
           }
         }
         pthread_mutex_unlock(&sync_mutex);
+#elif defined(ARCH_IS_LINUX)    
+        time(&tm);    
+        long n = tm.tv_nsec;
+        tm.tv_nsec += sleeptime;
+        if( n > tm.tv_nsec){
+          tm.tv_sec += 1;
+        }
+        pthread_mutex_lock(&sync_mutex);
+        int rtn = pthread_cond_timedwait(&sync_cnd,&sync_mutex,ctime(&tm));
+        if(rtn == 0){
+          for (i = 0; i < samplecnt; i += step) {
+            MM68KExec(step);
+            m68kcycle += base_clock;
+          }
+          frame += samplecnt;
+          if (use_new_scsp) {
+            new_scsp_exec((samplecnt << 1));
+          }
+          else {
+            scsp_update_timer(1);
+          }
+        }
+        pthread_mutex_unlock(&sync_mutex);
 #else
         if (sleeptime > 10000) YabThreadUSleep(0);
         if(sh2_read_req != 0) {
