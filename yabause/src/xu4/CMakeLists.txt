@@ -25,3 +25,5 @@ target_link_libraries(yabause-xu4 yabause ${YABAUSE_LIBRARIES} ${PORT_LIBRARIES}
 
 yab_port_success(yabause-xu4)
 
+install(TARGETS yabause-xu4 DESTINATION ".")
+install(FILES "README.md" DESTINATION "." )
