@@ -261,34 +261,53 @@ int main(int argc, char** argv)
     }
 		else if(( x == "-v" || x == "--version") ) {
       printf("YabaSanshiro version %s(%s)\n",YAB_VERSION, GIT_SHA1 );
-      exit(0);
+      return 0;
     }
 	}
 
-  SDL_Init(SDL_INIT_VIDEO); 
+  if( SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO) != 0 ) {
+    printf("Fail to init SDL Bye! (%s)", SDL_GetError() );
+    return -1;
+  }
 
   SDL_DisplayMode dsp;
-  SDL_GetCurrentDisplayMode(0,&dsp);
-  int width = dsp.w;
-  int height = dsp.h;
-  wnd = SDL_CreateWindow("Yaba Snashiro", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-      width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
-  dsp.refresh_rate = 60;
-  SDL_SetWindowDisplayMode(wnd,&dsp);
-  SDL_GetWindowSize(wnd,&width,&height);
-  SDL_SetWindowInputFocus(wnd);
+  if( SDL_GetCurrentDisplayMode(0,&dsp) != 0 ){
+    printf("Fail to SDL_GetCurrentDisplayMode Bye! (%s)", SDL_GetError() );
+    return -1;
+  }
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
   SDL_GL_SetSwapInterval(0);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
+
+  int width = dsp.w;
+  int height = dsp.h;
+  wnd = SDL_CreateWindow("Yaba Snashiro", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+      width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
+  if(wnd == nullptr ) {
+    printf("Fail to SDL_CreateWindow Bye! (%s)", SDL_GetError() );
+    return -1;
+  }
+
+  dsp.refresh_rate = 60;
+  SDL_SetWindowDisplayMode(wnd,&dsp);
+  SDL_GetWindowSize(wnd,&width,&height);
+  SDL_SetWindowInputFocus(wnd);
   glc = SDL_GL_CreateContext(wnd);
+  if(glc == nullptr ) {
+    printf("Fail to SDL_GL_CreateContext Bye! (%s)", SDL_GetError() );
+    return -1;
+  }
+
   printf("context renderer string: \"%s\"\n", glGetString(GL_RENDERER));
   printf("context vendor string: \"%s\"\n", glGetString(GL_VENDOR));
   printf("version string: \"%s\"\n", glGetString(GL_VERSION));
   printf("Extentions: %s\n",glGetString(GL_EXTENSIONS));
 
   if( yabauseinit() == -1 ) {
+      printf("Fail to yabauseinit Bye! (%s)", SDL_GetError() );
       return -1;
   }
 
@@ -328,7 +347,7 @@ int main(int argc, char** argv)
         SDL_GL_SwapWindow(wnd);
         YabauseDeInit();
         SDL_Quit();
-        exit(0);  
+        return 0;
       }
       inputmng->parseEvent(e);
 
