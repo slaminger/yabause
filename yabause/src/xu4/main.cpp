@@ -7,6 +7,8 @@
 #define GL_GLEXT_PROTOTYPES 1
 #include <SDL2/SDL_opengles2.h>
 
+#include "InputManager.h"
+
 extern "C" {
 #include "../config.h"
 #include "yabause.h"
@@ -15,6 +17,7 @@ extern "C" {
 #include "vidsoft.h"
 #include "vidogl.h"
 #include "peripheral.h"
+#include "persdljoy.h"
 #include "m68kcore.h"
 #include "sh2core.h"
 #include "sh2int.h"
@@ -61,6 +64,7 @@ SH2Interface_struct *SH2CoreList[] = {
 
 PerInterface_struct *PERCoreList[] = {
   &PERDummy,
+  &PERSDLJoy,
   NULL
 };
 
@@ -131,12 +135,15 @@ int g_keep_aspect_rate = 0;
 int g_scsp_sync = 1;
 int g_frame_skip = 0;
 int g_emulated_bios = 1;
+InputManager* inputmng;
 
 int yabauseinit()
 {
   int res;
-  yabauseinit_struct yinit;
+  yabauseinit_struct yinit = {};
   void * padbits;
+  inputmng = InputManager::getInstance();
+  
 
   yinit.m68kcoretype = M68KCORE_MUSASHI;
   yinit.percoretype = PERCORE_DUMMY;
@@ -180,9 +187,10 @@ int yabauseinit()
     {
         return -1;
     }
+  inputmng->init();
+#if 0
   PerPortReset();
   padbits = PerPadAdd(&PORTDATA1);
-
   PerSetKey(SDLK_UP, PERPAD_UP, padbits);
   PerSetKey(SDLK_RIGHT, PERPAD_RIGHT, padbits);
   PerSetKey(SDLK_DOWN, PERPAD_DOWN, padbits);
@@ -196,7 +204,7 @@ int yabauseinit()
   PerSetKey(SDLK_a, PERPAD_X, padbits);
   PerSetKey(SDLK_s, PERPAD_Y, padbits);
   PerSetKey(SDLK_d, PERPAD_Z, padbits);
-
+#endif
   OSDInit(0);
   OSDChangeCore(OSDCORE_NANOVG);
   
@@ -210,6 +218,8 @@ using std::string;
 
 int main(int argc, char** argv)
 {
+
+  inputmng = InputManager::getInstance();
 
   std::string current_exec_name = argv[0]; // Name of the current exec program
   std::vector<std::string> all_args;
@@ -254,12 +264,15 @@ int main(int argc, char** argv)
       exit(0);
     }
 	}
+
+  SDL_Init(SDL_INIT_VIDEO); 
+
   SDL_DisplayMode dsp;
-  int width = 800;
-  int height = 600;
-  wnd = SDL_CreateWindow("test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+  SDL_GetCurrentDisplayMode(0,&dsp);
+  int width = dsp.w;
+  int height = dsp.h;
+  wnd = SDL_CreateWindow("Yaba Snashiro", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
       width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
-  SDL_GetWindowDisplayMode(wnd,&dsp);
   dsp.refresh_rate = 60;
   SDL_SetWindowDisplayMode(wnd,&dsp);
   SDL_GetWindowSize(wnd,&width,&height);
@@ -305,13 +318,21 @@ int main(int argc, char** argv)
     VIDCore->Resize(0,0,width,height,0);
   }
   SDL_GL_MakeCurrent(wnd,nullptr);
-  glClearColor(0.0,0.0,0.0,1.0);
-  glClear(GL_COLOR_BUFFER_BIT);
   YabThreadSetCurrentThreadAffinityMask(0x00);
   while(true) {
     SDL_Event e;
     while(SDL_PollEvent(&e)) {
-      if(e.type == SDL_QUIT) std::terminate();
+      if(e.type == SDL_QUIT){
+        glClearColor(0.0,0.0,0.0,1.0);
+        glClear(GL_COLOR_BUFFER_BIT);        
+        SDL_GL_SwapWindow(wnd);
+        YabauseDeInit();
+        SDL_Quit();
+        exit(0);  
+      }
+      inputmng->parseEvent(e);
+
+#if 0      
       switch( e.type ){
         /* Keyboard event */
         /* Pass the event data onto PrintKeyInfo() */
@@ -324,7 +345,9 @@ int main(int argc, char** argv)
       default:
         break;
       }
+#endif      
     }
+    inputmng->handleJoyEvents();
     YabauseExec(); // exec one frame
   }
   YabauseDeInit();

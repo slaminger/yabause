@@ -838,8 +838,8 @@ if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv7l")
     #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -mcpu=cortex-a8 -mfpu=vfp -mfloat-abi=hard")
     #set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -O3 -mcpu=cortex-a8 -mfpu=vfp -mfloat-abi=hard")
 
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fomit-frame-pointer -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4")
-    set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -O3 -fomit-frame-pointer -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -g -fomit-frame-pointer  -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4")
+    set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -O3 -g -fomit-frame-pointer -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4")
 
 endif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv7l")
 if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv7-a")
