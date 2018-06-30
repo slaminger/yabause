@@ -1,3 +1,22 @@
+/*  Copyright 2018 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+Yabause is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+Yabause is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
+
 #include <exception>
 #include <functional>
 #include <string>
@@ -11,7 +30,6 @@
 #define GL_GLEXT_PROTOTYPES 1
 #include <SDL2/SDL_opengles2.h>
 
-#include "InputManager.h"
 
 extern "C" {
 #include "../config.h"
@@ -32,7 +50,13 @@ extern "C" {
 #include "sndsdl.h"
 #include "osdcore.h"
 #include "ygl.h"
+#include "libpng/png.h"
+}
 
+#include "InputManager.h"
+#include "MenuScreen.h"
+
+extern "C" {
 static char biospath[256] = "/home/pigaming/RetroPie/BIOS/saturn/bios.bin";
 static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/nights.cue";
 static char buppath[256] = "./back.bin";
@@ -94,15 +118,14 @@ VideoInterface_struct *VIDCoreList[] = {
   NULL
 };
 
-/*
-#ifdef YAB_PORT_OSD
-#include "nanovg/nanovg_osdcore.h"
-OSD_struct *OSDCoreList[] = {
-  &OSDNnovg,
-  NULL
-};
-#endif
-*/
+
+//#ifdef YAB_PORT_OSD
+//#include "nanovg/nanovg_osdcore.h"
+//OSD_struct *OSDCoreList[] = {
+//  &OSDNnovg,
+//  NULL
+//};
+//#endif
 
 OSD_struct *OSDCoreList[] = {
   &OSDDummy,
@@ -111,12 +134,25 @@ OSD_struct *OSDCoreList[] = {
 
 static SDL_Window* wnd;
 static SDL_GLContext glc;
+int g_EnagleFPS = 0;
+int g_resolution_mode = 0;
+int g_keep_aspect_rate = 0;
+int g_scsp_sync = 1;
+int g_frame_skip = 0;
+int g_emulated_bios = 1;
+InputManager* inputmng;
+MenuScreen * menu;
+
+using std::string;
+
+//----------------------------------------------------------------------------------------------
+NVGcontext * getGlobalNanoVGContext(){
+  return menu->nvgContext();
+}
 
 void DrawDebugInfo()
 {
 }
-
-int g_EnagleFPS = 0;
 
 void YuiErrorMsg(const char *string)
 {
@@ -126,7 +162,7 @@ void YuiErrorMsg(const char *string)
 void YuiSwapBuffers(void)
 {
   SDL_GL_SwapWindow(wnd);
-  //SetOSDToggle(1);
+  //SetOSDToggle(g_EnagleFPS);
 }
 
 int YuiRevokeOGLOnThisThread(){
@@ -143,22 +179,12 @@ int YuiUseOGLOnThisThread(){
 
 }
 
-int g_resolution_mode = 0;
-int g_keep_aspect_rate = 0;
-int g_scsp_sync = 1;
-int g_frame_skip = 0;
-int g_emulated_bios = 1;
-InputManager* inputmng;
-
 int saveScreenshot( const char * filename );
 
 int yabauseinit()
 {
   int res;
   yabauseinit_struct yinit = {};
-  void * padbits;
-  inputmng = InputManager::getInstance();
-  
 
   yinit.m68kcoretype = M68KCORE_MUSASHI;
   yinit.percoretype = PERCORE_DUMMY;
@@ -197,47 +223,23 @@ int yabauseinit()
   yinit.scsp_sync_count_per_frame = g_scsp_sync;
   yinit.extend_backup = 1;
 
-    res = YabauseInit(&yinit);
-    if( res == -1)
-    {
-        return -1;
-    }
+  res = YabauseInit(&yinit);
+  if( res == -1) {
+    return -1;
+  }
+
   inputmng->init();
-#if 0
-  PerPortReset();
-  padbits = PerPadAdd(&PORTDATA1);
-  PerSetKey(SDLK_UP, PERPAD_UP, padbits);
-  PerSetKey(SDLK_RIGHT, PERPAD_RIGHT, padbits);
-  PerSetKey(SDLK_DOWN, PERPAD_DOWN, padbits);
-  PerSetKey(SDLK_LEFT, PERPAD_LEFT, padbits);
-  PerSetKey(SDLK_q, PERPAD_RIGHT_TRIGGER, padbits);
-  PerSetKey(SDLK_e, PERPAD_LEFT_TRIGGER, padbits);
-  PerSetKey(SDLK_RETURN, PERPAD_START, padbits);
-  PerSetKey(SDLK_z, PERPAD_A, padbits);
-  PerSetKey(SDLK_x, PERPAD_B, padbits);
-  PerSetKey(SDLK_c, PERPAD_C, padbits);
-  PerSetKey(SDLK_a, PERPAD_X, padbits);
-  PerSetKey(SDLK_s, PERPAD_Y, padbits);
-  PerSetKey(SDLK_d, PERPAD_Z, padbits);
-#endif
   //OSDInit(0);
   //OSDChangeCore(OSDCORE_NANOVG);
-  
   LogStart();
   LogChangeOutput(DEBUG_CALLBACK, NULL);
-
   return 0;
 }
 
-using std::string;
-#include "MenuScreen.h"
-
 int main(int argc, char** argv)
 {
-
   inputmng = InputManager::getInstance();
-  MenuScreen * menu;
-
+  
   // Inisialize home directory
   std::string home_dir = getenv("HOME");
   home_dir += "/.yabasanshiro";
@@ -245,8 +247,8 @@ int main(int argc, char** argv)
   if (stat(home_dir.c_str(), &st) == -1) {
     mkdir(home_dir.c_str(), 0700);
   }  
-  home_dir += "backup.bin";
-  strcpy( buppath, home_dir.c_str() );
+  std::string bckup_dir = home_dir + "backup.bin";
+  strcpy( buppath, bckup_dir.c_str() );
 
   std::string current_exec_name = argv[0]; // Name of the current exec program
   std::vector<std::string> all_args;
@@ -317,7 +319,6 @@ int main(int argc, char** argv)
     printf("Fail to SDL_CreateWindow Bye! (%s)", SDL_GetError() );
     return -1;
   }
-  
 
   dsp.refresh_rate = 60;
   SDL_SetWindowDisplayMode(wnd,&dsp);
@@ -381,6 +382,7 @@ int main(int argc, char** argv)
   int padmode = 0;
   
   bool menu_show = false;
+  std::string tmpfilename = home_dir + "tmp.png";
 
   while(true) {
     SDL_Event e;
@@ -407,7 +409,7 @@ int main(int argc, char** argv)
           VdpRevoke();
           inputmng->setMenuLayer(menu);
           SDL_GL_MakeCurrent(wnd,glc);
-          saveScreenshot("tmp.png");
+          saveScreenshot(tmpfilename.c_str());
           glUseProgram(0);
           glGetError();
           glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -419,7 +421,7 @@ int main(int argc, char** argv)
           glDisable(GL_SCISSOR_TEST);
           glDisable(GL_STENCIL_TEST);
           glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);   
-          menu->setBackGroundImage( std::string("tmp.png") );
+          menu->setBackGroundImage( tmpfilename );
         }
       }
 
@@ -462,16 +464,12 @@ int main(int argc, char** argv)
       YabauseExec(); // exec one frame
     }
   }
-  //YabauseDeInit();
+  YabauseDeInit();
   SDL_Quit();
   return 0;
 }
 
-extern "C" {
-#include "libpng/png.h"
-}
 #define YUI_LOG printf
-
 int saveScreenshot( const char * filename ){
     
     int width;

@@ -42,5 +42,8 @@ target_link_libraries(yabause-xu4 yabause  ${Boost_LIBRARIES} pugixml ${YABAUSE_
 
 yab_port_success(yabause-xu4)
 
-install(TARGETS yabause-xu4 DESTINATION "/opt/retropie/emulators/yabasanshiro/")
-install(FILES "README.md" DESTINATION "/opt/retropie/emulators/yabasanshiro/" )
+#install(TARGETS yabause-xu4 DESTINATION "/opt/retropie/emulators/yabasanshiro/")
+#install(FILES "README.md" DESTINATION "/opt/retropie/emulators/yabasanshiro/" )
+
+install(TARGETS yabause-xu4 DESTINATION "bin")
+install(FILES "README.md" DESTINATION "." )

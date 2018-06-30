@@ -90,11 +90,12 @@ static int profile_index = 0;
 
 int OSDNanovgInit(void)
 {
-#if defined(_OGLES3_)
-  vg = nvgCreateGLES3(NVG_ANTIALIAS);
-#else
-  vg = nvgCreateGL3(NVG_ANTIALIAS);
-#endif	
+//#if defined(_OGLES3_)
+//  vg = nvgCreateGLES3(NVG_ANTIALIAS);
+//#else
+//  vg = nvgCreateGL3(NVG_ANTIALIAS);
+//#endif	
+  vg = getGlobalNanoVGContext();
   if (vg == NULL) {
     printf("Could not init nanovg.\n");
     return -1;
