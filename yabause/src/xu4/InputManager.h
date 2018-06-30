@@ -9,6 +9,8 @@
 class InputConfig;
 class YWindow;
 
+class MenuScreen;
+
 //you should only ever instantiate one of these, by the way
 class InputManager
 {
@@ -33,6 +35,7 @@ private:
 	void addJoystickByDeviceIndex(int id);
 	void removeJoystickByJoystickID(SDL_JoystickID id);
 	bool loadInputConfig(InputConfig* config); // returns true if successfully loaded, false if not (or didn't exist)
+	MenuScreen * menu_layer_ = nullptr;
 
 public:
 	virtual ~InputManager();
@@ -55,6 +58,20 @@ public:
 
 	int handleJoyEvents(void);
 	bool parseEvent(const SDL_Event& ev );
+
+	int handleJoyEventsMenu(void);
+	bool parseEventMenu(const SDL_Event& ev );
+
+	void setMenuLayer( MenuScreen * menu_layer ){
+		menu_layer_ = menu_layer;
+	}
+
+	uint32_t select_button_ = 0;
+	uint32_t showmenu_ = 0;
+	void setToggleMenuEventCode( uint32_t type ){ showmenu_ = type; }
+
+	void setGamePadomode( int user, int mode );
+	
 };
 
 #endif

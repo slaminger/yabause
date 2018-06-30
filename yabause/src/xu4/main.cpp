@@ -3,6 +3,10 @@
 #include <string>
 #include <vector>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <SDL2/SDL.h>
 #define GL_GLEXT_PROTOTYPES 1
 #include <SDL2/SDL_opengles2.h>
@@ -34,6 +38,8 @@ static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/nights.cue";
 static char buppath[256] = "./back.bin";
 static char mpegpath[256] = "\0";
 static char cartpath[256] = "\0";
+
+#define LOG
 
 M68K_struct * M68KCoreList[] = {
   &M68KDummy,
@@ -88,6 +94,7 @@ VideoInterface_struct *VIDCoreList[] = {
   NULL
 };
 
+/*
 #ifdef YAB_PORT_OSD
 #include "nanovg/nanovg_osdcore.h"
 OSD_struct *OSDCoreList[] = {
@@ -95,6 +102,12 @@ OSD_struct *OSDCoreList[] = {
   NULL
 };
 #endif
+*/
+
+OSD_struct *OSDCoreList[] = {
+  &OSDDummy,
+  NULL
+};
 
 static SDL_Window* wnd;
 static SDL_GLContext glc;
@@ -107,25 +120,25 @@ int g_EnagleFPS = 0;
 
 void YuiErrorMsg(const char *string)
 {
-  printf("%s",string);
+  LOG("%s",string);
 }
 
 void YuiSwapBuffers(void)
 {
   SDL_GL_SwapWindow(wnd);
-  SetOSDToggle(1);
+  //SetOSDToggle(1);
 }
 
 int YuiRevokeOGLOnThisThread(){
-  printf("revoke thread\n");
-    SDL_GL_MakeCurrent(wnd,nullptr);
-    return 0;
+  LOG("revoke thread\n");
+  SDL_GL_MakeCurrent(wnd,nullptr);
+  return 0;
 }
 
 int YuiUseOGLOnThisThread(){
-  printf("use thread\n");
-    SDL_GL_MakeCurrent(wnd,glc);
-    return 0;
+  LOG("use thread\n");
+  SDL_GL_MakeCurrent(wnd,glc);
+  return 0;
 }
 
 }
@@ -136,6 +149,8 @@ int g_scsp_sync = 1;
 int g_frame_skip = 0;
 int g_emulated_bios = 1;
 InputManager* inputmng;
+
+int saveScreenshot( const char * filename );
 
 int yabauseinit()
 {
@@ -205,8 +220,8 @@ int yabauseinit()
   PerSetKey(SDLK_s, PERPAD_Y, padbits);
   PerSetKey(SDLK_d, PERPAD_Z, padbits);
 #endif
-  OSDInit(0);
-  OSDChangeCore(OSDCORE_NANOVG);
+  //OSDInit(0);
+  //OSDChangeCore(OSDCORE_NANOVG);
   
   LogStart();
   LogChangeOutput(DEBUG_CALLBACK, NULL);
@@ -215,11 +230,23 @@ int yabauseinit()
 }
 
 using std::string;
+#include "MenuScreen.h"
 
 int main(int argc, char** argv)
 {
 
   inputmng = InputManager::getInstance();
+  MenuScreen * menu;
+
+  // Inisialize home directory
+  std::string home_dir = getenv("HOME");
+  home_dir += "/.yabasanshiro";
+  struct stat st = {0};
+  if (stat(home_dir.c_str(), &st) == -1) {
+    mkdir(home_dir.c_str(), 0700);
+  }  
+  home_dir += "backup.bin";
+  strcpy( buppath, home_dir.c_str() );
 
   std::string current_exec_name = argv[0]; // Name of the current exec program
   std::vector<std::string> all_args;
@@ -290,6 +317,7 @@ int main(int argc, char** argv)
     printf("Fail to SDL_CreateWindow Bye! (%s)", SDL_GetError() );
     return -1;
   }
+  
 
   dsp.refresh_rate = 60;
   SDL_SetWindowDisplayMode(wnd,&dsp);
@@ -305,6 +333,8 @@ int main(int argc, char** argv)
   printf("context vendor string: \"%s\"\n", glGetString(GL_VENDOR));
   printf("version string: \"%s\"\n", glGetString(GL_VERSION));
   printf("Extentions: %s\n",glGetString(GL_EXTENSIONS));
+
+  menu = new MenuScreen(wnd,width,height);
 
   if( yabauseinit() == -1 ) {
       printf("Fail to yabauseinit Bye! (%s)", SDL_GetError() );
@@ -338,6 +368,20 @@ int main(int argc, char** argv)
   }
   SDL_GL_MakeCurrent(wnd,nullptr);
   YabThreadSetCurrentThreadAffinityMask(0x00);
+
+  Uint32 evToggleMenu = SDL_RegisterEvents(1);
+  inputmng->setToggleMenuEventCode(evToggleMenu);
+
+  Uint32  evResetMenu = SDL_RegisterEvents(1);
+  menu->setResetMenuEventCode(evResetMenu);
+
+  Uint32  evPadMenu = SDL_RegisterEvents(1);
+  menu->setTogglePadModeMenuEventCode(evPadMenu);
+
+  int padmode = 0;
+  
+  bool menu_show = false;
+
   while(true) {
     SDL_Event e;
     while(SDL_PollEvent(&e)) {
@@ -349,27 +393,212 @@ int main(int argc, char** argv)
         SDL_Quit();
         return 0;
       }
-      inputmng->parseEvent(e);
 
-#if 0      
-      switch( e.type ){
-        /* Keyboard event */
-        /* Pass the event data onto PrintKeyInfo() */
-      case SDL_KEYDOWN:
-        PerKeyDown( e.key.keysym.sym );
-        break;
-      case SDL_KEYUP:
-        PerKeyUp( e.key.keysym.sym );
-        break;
-      default:
-        break;
+      else if(e.type == evToggleMenu){
+        if( menu_show ){
+          menu_show = false;
+          inputmng->setMenuLayer(nullptr);
+          SDL_GL_MakeCurrent(wnd,nullptr);
+          VdpResume();
+          SNDSDL.UnMuteAudio();          
+        }else{
+          menu_show = true;
+          SNDSDL.MuteAudio();
+          VdpRevoke();
+          inputmng->setMenuLayer(menu);
+          SDL_GL_MakeCurrent(wnd,glc);
+          saveScreenshot("tmp.png");
+          glUseProgram(0);
+          glGetError();
+          glBindBuffer(GL_ARRAY_BUFFER, 0);
+          glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0);
+          glDisableVertexAttribArray(0);
+          glDisableVertexAttribArray(1);
+          glDisableVertexAttribArray(2);
+          glDisable(GL_DEPTH_TEST);
+          glDisable(GL_SCISSOR_TEST);
+          glDisable(GL_STENCIL_TEST);
+          glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);   
+          menu->setBackGroundImage( std::string("tmp.png") );
+        }
       }
-#endif      
+
+      else if(e.type == evResetMenu){
+        YabauseReset();
+        menu_show = false;
+        inputmng->setMenuLayer(nullptr);
+        SDL_GL_MakeCurrent(wnd,nullptr);
+        VdpResume();
+        SNDSDL.UnMuteAudio(); 
+      }
+
+      else if(e.type == evPadMenu ){
+        if( padmode == 0 ){
+          padmode = 1;
+        }else{
+          padmode = 0;
+        }
+        inputmng->setGamePadomode( 0, padmode );
+        menu_show = false;
+        inputmng->setMenuLayer(nullptr);
+        SDL_GL_MakeCurrent(wnd,nullptr);
+        VdpResume();
+        SNDSDL.UnMuteAudio();         
+      }
+
+      inputmng->parseEvent(e);
+      if( menu_show ){
+        menu->onEvent( e );
+      }
     }
     inputmng->handleJoyEvents();
-    YabauseExec(); // exec one frame
+
+    if( menu_show ){
+      glClearColor(0.0f, 0.0f, 0.0f, 1);
+      glClear(GL_COLOR_BUFFER_BIT);
+      menu->drawAll();
+      SDL_GL_SwapWindow(wnd);
+    }else{
+      YabauseExec(); // exec one frame
+    }
   }
-  YabauseDeInit();
+  //YabauseDeInit();
   SDL_Quit();
   return 0;
+}
+
+extern "C" {
+#include "libpng/png.h"
+}
+#define YUI_LOG printf
+
+int saveScreenshot( const char * filename ){
+    
+    int width;
+    int height;
+    unsigned char * buf = NULL;
+    unsigned char * bufRGB = NULL;
+    png_bytep * row_pointers = NULL;
+    int quality = 100; // best
+    FILE * outfile = NULL;
+    int row_stride;
+    int glerror;
+    int u,v;
+    int pmode;
+    png_byte color_type;
+    png_byte bit_depth; 
+    png_structp png_ptr;
+    png_infop info_ptr;
+    int number_of_passes;
+    int rtn = -1;
+  
+    SDL_GetWindowSize( wnd, &width, &height);
+    buf = (unsigned char *)malloc(width*height*4);
+    if( buf == NULL ) {
+        YUI_LOG("not enough memory\n");
+        goto FINISH;
+    }
+
+    glReadBuffer(GL_BACK);
+    pmode = GL_RGBA;
+    glGetError();
+    glReadPixels(0, 0, width, height, pmode, GL_UNSIGNED_BYTE, buf);
+    if( (glerror = glGetError()) != GL_NO_ERROR ){
+        YUI_LOG("glReadPixels %04X\n",glerror);
+         goto FINISH;
+    }
+	
+	for( u = 3; u <width*height*4; u+=4 ){
+		buf[u]=0xFF;
+	}
+    row_pointers = (png_byte**)malloc(sizeof(png_bytep) * height);
+    for (v=0; v<height; v++)
+        row_pointers[v] = (png_byte*)&buf[ (height-1-v) * width * 4];
+
+    // save as png
+    if ((outfile = fopen(filename, "wb")) == NULL) {
+        YUI_LOG("can't open %s\n", filename);
+        goto FINISH;
+    }
+
+    /* initialize stuff */
+    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+
+    if (!png_ptr){
+        YUI_LOG("[write_png_file] png_create_write_struct failed");
+        goto FINISH;
+    }
+
+    info_ptr = png_create_info_struct(png_ptr);
+    if (!info_ptr){
+        YUI_LOG("[write_png_file] png_create_info_struct failed");
+        goto FINISH;
+    }
+
+    if (setjmp(png_jmpbuf(png_ptr))){
+        YUI_LOG("[write_png_file] Error during init_io");
+        goto FINISH;
+    }
+    /* write header */
+    png_init_io(png_ptr, outfile);
+    
+    if (setjmp(png_jmpbuf(png_ptr))){
+        YUI_LOG("[write_png_file] Error during writing header");
+        goto FINISH;
+    }
+    bit_depth = 8;
+    color_type = PNG_COLOR_TYPE_RGB_ALPHA;
+    png_set_IHDR(png_ptr, info_ptr, width, height,
+        bit_depth, color_type, PNG_INTERLACE_NONE,
+        PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+    //png_set_gAMA(png_ptr, info_ptr, 1.0);
+    {
+        png_text text[3];
+        int txt_fields = 0;
+        char desc[256];
+        
+        time_t      gmt;
+        png_time    mod_time;
+        
+        time(&gmt);
+        png_convert_from_time_t(&mod_time, gmt);
+        png_set_tIME(png_ptr, info_ptr, &mod_time);
+    
+        text[txt_fields].key = "Title";
+        text[txt_fields].text = Cs2GetCurrentGmaecode();
+        text[txt_fields].compression = PNG_TEXT_COMPRESSION_NONE;
+        txt_fields++;
+
+        sprintf( desc, "Yaba Sanshiro Version %s\n VENDER: %s\n RENDERER: %s\n VERSION %s\n",YAB_VERSION,glGetString(GL_VENDOR),glGetString(GL_RENDERER),glGetString(GL_VERSION));
+        text[txt_fields].key ="Description";
+        text[txt_fields].text=desc;
+        text[txt_fields].compression = PNG_TEXT_COMPRESSION_NONE;
+        txt_fields++;
+        
+        png_set_text(png_ptr, info_ptr, text,txt_fields);
+    }       
+    png_write_info(png_ptr, info_ptr);
+
+
+    /* write bytes */
+    if (setjmp(png_jmpbuf(png_ptr))){
+        YUI_LOG("[write_png_file] Error during writing bytes");
+        goto FINISH;
+    }
+    png_write_image(png_ptr, row_pointers);
+
+    /* end write */
+    if (setjmp(png_jmpbuf(png_ptr))){
+        YUI_LOG("[write_png_file] Error during end of write");
+        goto FINISH;
+    }
+    
+    png_write_end(png_ptr, NULL);
+    rtn = 0;
+FINISH: 
+    if(outfile) fclose(outfile);
+    if(buf) free(buf);
+    if(bufRGB) free(bufRGB);
+    if(row_pointers) free(row_pointers);
+    return rtn;
 }

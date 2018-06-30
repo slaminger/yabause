@@ -79,12 +79,12 @@ bool InputConfig::getInputByName(const std::string& name, Input* result)
 {
 	auto it = mNameMap.find(toLower(name));
 	
-	printf("getInputByName %s\n",toLower(name).c_str());
+	//printf("getInputByName %s\n",toLower(name).c_str());
 
 	if(it != mNameMap.end())
 	{
 		*result = it->second;
-		printf("getInputByName %s:%d\n",name.c_str(),result->id);
+		//printf("getInputByName %s:%d\n",name.c_str(),result->id);
 		return true;
 	}
 
@@ -162,17 +162,17 @@ void InputConfig::loadFromXML(pugi::xml_node node)
 
 		if(typeEnum == TYPE_COUNT)
 		{
-//			LOG(LogError) << "InputConfig load error - input of type \"" << type << "\" is invalid! Skipping input \"" << name << "\".\n";
+//		LOG(LogError) << "InputConfig load error - input of type \"" << type << "\" is invalid! Skipping input \"" << name << "\".\n";
 			continue;
 		}
 
 		int id = input.attribute("id").as_int();
 		int value = input.attribute("value").as_int();
 
-		printf("%s:%d\n", name.c_str(), id );
+		//printf("%s:%d\n", name.c_str(), id );
 
-//		if(value == 0)
-//			LOG(LogWarning) << "WARNING: InputConfig value is 0 for " << type << " " << id << "!\n";
+//	if(value == 0)
+//	 LOG(LogWarning) << "WARNING: InputConfig value is 0 for " << type << " " << id << "!\n";
 
 		mNameMap[toLower(name)] = Input(mDeviceId, typeEnum, id, value, true);
 	}

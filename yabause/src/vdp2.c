@@ -76,6 +76,8 @@ int g_frame_count = 0;
 
 //#define LOG yprintf
 
+YabEventQueue * command_ = NULL;;
+
 void VdpLockVram() {
   YabThreadLock(vrammutex);
 }
@@ -280,6 +282,8 @@ int Vdp2Init(void) {
 
    vrammutex = YabThreadCreateMutex();
 
+   command_ = YabThreadCreateQueue(1);
+
 
    memset(Vdp2ColorRam, 0xFF, 0x1000);
    for (int i = 0; i < 0x1000; i += 2) {
@@ -455,9 +459,11 @@ void VdpProc( void *arg ){
       break;
     case VDPEV_MAKECURRENT:
       YuiUseOGLOnThisThread();
+      YabAddEventQueue(command_,0);
       break;
     case VDPEV_REVOKE:
       YuiRevokeOGLOnThisThread();
+      YabAddEventQueue(command_,0);
       break;
     case VDPEV_FINSH:
       vdp_proc_running = 0;
@@ -1700,15 +1706,19 @@ void DisableAutoFrameSkip(void)
    autoframeskipenab = 0;
 }
 
+
+
 void VdpResume( void ){
 #if defined(YAB_ASYNC_RENDERING)
 	YabAddEventQueue(evqueue,VDPEV_MAKECURRENT);
+  YabWaitEventQueue(command_);
 #endif
 }
 
 void VdpRevoke( void ){
 #if defined(YAB_ASYNC_RENDERING)
 	YabAddEventQueue(evqueue,VDPEV_REVOKE);
+  YabWaitEventQueue(command_);
 #endif
 }
 

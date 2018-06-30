@@ -9,11 +9,13 @@
 #include <iostream>
 
 using namespace std;
-
+#include "MenuScreen.h"
 extern "C"{
 #include "yabause.h"
 #include "peripheral.h"
 }
+
+#define LOG
 
 #define SDL_MAX_AXIS_VALUE 0x110000
 #define SDL_MIN_AXIS_VALUE 0x100000
@@ -60,6 +62,89 @@ InputManager* InputManager::getInstance()
 	return mInstance;
 }
 
+#define MAKE_PAD(a,b) ((a<<24)|(b))
+
+uint32_t genid( int user, int joyId, const Input & result ){
+	if( result.type == TYPE_AXIS ){
+		return MAKE_PAD(user,((joyId << 18)|SDL_MAX_AXIS_VALUE|result.id));
+	}else{
+		return MAKE_PAD(user,((joyId << 18)|result.id));
+	}
+}
+
+void InputManager::setGamePadomode( int user, int mode ){
+
+	void * padbits;
+	Input result;	
+	int numJoysticks = SDL_NumJoysticks();
+	
+	if( numJoysticks != 0 ){
+		
+		int joyId = mInputConfigs[0]->getDeviceId();
+
+		if( mode == 0 ){
+			LOG("Switch to dig mode\n");
+			PerPortReset();
+			if( user == 0 ){
+				padbits = PerPadAdd(&PORTDATA1);		
+			}else{
+				padbits = PerPadAdd(&PORTDATA2);		
+			}
+		}else if( mode == 1 ){
+			LOG("Switch to Analog mode\n");
+      PerPortReset();
+
+			if( user == 0 ){
+      	padbits = Per3DPadAdd(&PORTDATA1);
+			}else{
+				padbits = Per3DPadAdd(&PORTDATA2);
+			}
+      PerSetKey(MAKE_PAD(user,((joyId << 18)|SDL_MEDIUM_AXIS_VALUE|0)), PERANALOG_AXIS1, padbits);
+      PerSetKey(MAKE_PAD(user,((joyId << 18)|SDL_MEDIUM_AXIS_VALUE|1)), PERANALOG_AXIS2, padbits);
+      PerSetKey(MAKE_PAD(user,((joyId << 18)|SDL_MEDIUM_AXIS_VALUE|2)), PERANALOG_AXIS3, padbits);
+      PerSetKey(MAKE_PAD(user,((joyId << 18)|SDL_MEDIUM_AXIS_VALUE|3)), PERANALOG_AXIS4, padbits);
+		}
+
+		mInputConfigs[0]->getInputByName("up", &result);
+		PerSetKey(genid(user,joyId,result),PERPAD_UP, padbits);
+		mInputConfigs[0]->getInputByName("down", &result);
+		PerSetKey(genid(user,joyId,result), PERPAD_DOWN, padbits);
+		mInputConfigs[0]->getInputByName("left", &result);
+		PerSetKey(genid(user,joyId,result), PERPAD_LEFT, padbits);
+		mInputConfigs[0]->getInputByName("right", &result);
+		PerSetKey(genid(user,joyId,result), PERPAD_RIGHT, padbits);
+		mInputConfigs[0]->getInputByName("start", &result);
+		PerSetKey(genid(user,joyId,result), PERPAD_START, padbits);
+		mInputConfigs[0]->getInputByName("select", &result);
+		select_button_ = result.id;		
+		mInputConfigs[0]->getInputByName("a", &result);
+		PerSetKey(genid(user,joyId,result), PERPAD_A, padbits);
+		mInputConfigs[0]->getInputByName("b", &result);
+		PerSetKey(genid(user,joyId,result), PERPAD_B, padbits);
+		mInputConfigs[0]->getInputByName("x", &result);
+		PerSetKey(genid(user,joyId,result), PERPAD_X, padbits);
+		mInputConfigs[0]->getInputByName("y", &result);
+		PerSetKey(genid(user,joyId,result) , PERPAD_Y, padbits);
+		mInputConfigs[0]->getInputByName("rightshoulder", &result);
+		PerSetKey(genid(user,joyId,result), PERPAD_C, padbits);
+		mInputConfigs[0]->getInputByName("leftshoulder", &result);
+		PerSetKey(genid(user,joyId,result), PERPAD_Z, padbits);
+
+		mInputConfigs[0]->getInputByName("lefttrigger", &result);
+		PerSetKey(genid(user,joyId,result), PERPAD_LEFT_TRIGGER, padbits);
+
+		mInputConfigs[0]->getInputByName("righttrigger", &result);
+		PerSetKey(genid(user,joyId,result), PERPAD_RIGHT_TRIGGER, padbits);
+		
+			
+		// Force Hat
+		PerSetKey( MAKE_PAD(user, (joyId << 18) | SDL_HAT_VALUE | (SDL_HAT_UP<<4)), PERPAD_UP, padbits);
+		PerSetKey( MAKE_PAD(user,(joyId << 18) | SDL_HAT_VALUE | (SDL_HAT_DOWN<<4)), PERPAD_DOWN, padbits);
+		PerSetKey( MAKE_PAD(user,(joyId << 18) | SDL_HAT_VALUE | (SDL_HAT_LEFT<<4)), PERPAD_LEFT, padbits);
+		PerSetKey( MAKE_PAD(user,(joyId << 18) | SDL_HAT_VALUE | (SDL_HAT_RIGHT<<4)), PERPAD_RIGHT, padbits);
+	}
+}
+
 void InputManager::init()
 {
 	void * padbits;
@@ -80,74 +165,13 @@ void InputManager::init()
 		addJoystickByDeviceIndex(i);
 	}
 
-	if( numJoysticks != 0 ){
-		PerPortReset();
-		padbits = PerPadAdd(&PORTDATA1);		
-		mInputConfigs[0]->getInputByName("up", &result);
-		PerSetKey(result.id, PERPAD_UP, padbits);
-		mInputConfigs[0]->getInputByName("down", &result);
-		PerSetKey(result.id, PERPAD_DOWN, padbits);
-		mInputConfigs[0]->getInputByName("left", &result);
-		PerSetKey(result.id, PERPAD_LEFT, padbits);
-		mInputConfigs[0]->getInputByName("right", &result);
-		PerSetKey(result.id, PERPAD_RIGHT, padbits);
-
-		mInputConfigs[0]->getInputByName("start", &result);
-		PerSetKey(result.id, PERPAD_START, padbits);
-
-		mInputConfigs[0]->getInputByName("a", &result);
-		PerSetKey(result.id, PERPAD_A, padbits);
-
-		mInputConfigs[0]->getInputByName("b", &result);
-		PerSetKey(result.id, PERPAD_B, padbits);
-
-		mInputConfigs[0]->getInputByName("x", &result);
-		PerSetKey(result.id, PERPAD_X, padbits);
-
-		mInputConfigs[0]->getInputByName("y", &result);
-		PerSetKey(result.id, PERPAD_Y, padbits);
-
-		mInputConfigs[0]->getInputByName("rightshoulder", &result);
-		PerSetKey(result.id, PERPAD_C, padbits);
-
-		mInputConfigs[0]->getInputByName("leftshoulder", &result);
-		PerSetKey(result.id, PERPAD_Z, padbits);
-
-		mInputConfigs[0]->getInputByName("lefttrigger", &result);
-		PerSetKey(result.id, PERPAD_LEFT_TRIGGER, padbits);
-
-		mInputConfigs[0]->getInputByName("righttrigger", &result);
-		PerSetKey(result.id, PERPAD_RIGHT_TRIGGER, padbits);
-
-		
-		// Force Hat
-		PerSetKey(SDL_HAT_VALUE | (SDL_HAT_UP<<4), PERPAD_UP, padbits);
-		PerSetKey(SDL_HAT_VALUE | (SDL_HAT_DOWN<<4), PERPAD_DOWN, padbits);
-		PerSetKey(SDL_HAT_VALUE | (SDL_HAT_LEFT<<4), PERPAD_LEFT, padbits);
-		PerSetKey(SDL_HAT_VALUE | (SDL_HAT_RIGHT<<4), PERPAD_RIGHT, padbits);
-
+	if( numJoysticks != 0 && mInputConfigs.size() != 0 ){
+		setGamePadomode( 0, 0 );
 		return;
 	}
 
 	mKeyboardInputConfig = new InputConfig(DEVICE_KEYBOARD, "Keyboard", KEYBOARD_GUID_STRING);
 	loadInputConfig(mKeyboardInputConfig);
-	
-	/*
-	padbits = PerPadAdd(&PORTDATA1);
-  PerSetKey(SDLK_UP, PERPAD_UP, padbits);
-  PerSetKey(SDLK_RIGHT, PERPAD_RIGHT, padbits);
-  PerSetKey(SDLK_DOWN, PERPAD_DOWN, padbits);
-  PerSetKey(SDLK_LEFT, PERPAD_LEFT, padbits);
-  PerSetKey(SDLK_q, PERPAD_RIGHT_TRIGGER, padbits);
-  PerSetKey(SDLK_e, PERPAD_LEFT_TRIGGER, padbits);
-  PerSetKey(SDLK_RETURN, PERPAD_START, padbits);
-  PerSetKey(SDLK_z, PERPAD_A, padbits);
-  PerSetKey(SDLK_x, PERPAD_B, padbits);
-  PerSetKey(SDLK_c, PERPAD_C, padbits);
-  PerSetKey(SDLK_a, PERPAD_X, padbits);
-  PerSetKey(SDLK_s, PERPAD_Y, padbits);
-  PerSetKey(SDLK_d, PERPAD_Z, padbits);
-	*/
 
 	PerPortReset();
 	padbits = PerPadAdd(&PORTDATA1);
@@ -163,6 +187,9 @@ void InputManager::init()
 	mKeyboardInputConfig->getInputByName("start", &result);
 	//printf("start id %d\n",result.id);
 	PerSetKey(result.id, PERPAD_START, padbits);
+
+	mKeyboardInputConfig->getInputByName("select", &result);
+	select_button_ = result.id;
 
 	mKeyboardInputConfig->getInputByName("a", &result);
 	PerSetKey(result.id, PERPAD_A, padbits);
@@ -283,6 +310,9 @@ void InputManager::deinit()
 	SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
 }
 
+
+
+
 int InputManager::getNumJoysticks() { return mJoysticks.size(); }
 int InputManager::getButtonCountByDevice(SDL_JoystickID id)
 {
@@ -300,6 +330,11 @@ InputConfig* InputManager::getInputConfigByDevice(int device)
 		return mInputConfigs[device];
 }
 
+int InputManager::handleJoyEventsMenu(void) {
+
+}
+
+
 int InputManager::handleJoyEvents(void) {
 	int joyId;
 	int i;
@@ -313,6 +348,10 @@ int InputManager::handleJoyEvents(void) {
 	
 	// update joysticks states
 	SDL_JoystickUpdate();
+
+	if(this->menu_layer_) {
+		return handleJoyEventsMenu();
+	}
 	
 	// check each joysticks
 	for ( joyId = 0; joyId < SDL_NumJoysticks() ; joyId++ )
@@ -329,17 +368,20 @@ int InputManager::handleJoyEvents(void) {
 		{
 			cur = SDL_JoystickGetAxis( joy, i );
 
+			
 			PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, (u8)(((int)cur+32768) >> 8));
 			
 			if ( cur < -SDL_MEDIUM_AXIS_VALUE )
 			{
 				PerKeyUp( (joyId << 18) | SDL_MAX_AXIS_VALUE | i );
 				PerKeyDown( (joyId << 18) | SDL_MIN_AXIS_VALUE | i );
+				//printf("PerAxisValue %d, %d\n",i,((u8)(((int)cur+32768) >> 8)));
 			}
 			else if ( cur > SDL_MEDIUM_AXIS_VALUE )
 			{
 				PerKeyUp( (joyId << 18) | SDL_MIN_AXIS_VALUE | i );
 				PerKeyDown( (joyId << 18) | SDL_MAX_AXIS_VALUE | i );
+				//printf("PerAxisValue %d, %d\n",i,((u8)(((int)cur+32768) >> 8)));
 			}
 			else
 			{
@@ -396,147 +438,133 @@ int InputManager::handleJoyEvents(void) {
 	return 0;
 }
 
+static const int DEADZONE = 23000;
 
+bool InputManager::parseEventMenu(const SDL_Event& ev ){
+	std::vector<std::string> evstr;
+	switch(ev.type)
+	{
+	case SDL_JOYAXISMOTION:{
+  	//if it switched boundaries
+		bool causedEvent = false;
+    if((abs(ev.jaxis.value) > DEADZONE) != (abs(mPrevAxisValues[ev.jaxis.which][ev.jaxis.axis]) > DEADZONE)) {
+    	int normValue;
+      if(abs(ev.jaxis.value) <= DEADZONE)
+      	normValue = 0;
+      else
+        if(ev.jaxis.value > 0)
+      	  normValue = 1;
+        else
+          normValue = -1;
+      //window->input(getInputConfigByDevice(ev.jaxis.which), Input(ev.jaxis.which, TYPE_AXIS, ev.jaxis.axis, normValue, false));
+			InputConfig* cfg = getInputConfigByDevice(ev.jbutton.which);
+			evstr = cfg->getMappedTo(Input(ev.jbutton.which, TYPE_BUTTON, ev.jbutton.button, normValue, false));
+			if( evstr.size() > 0 ){
+				menu_layer_->keyboardEvent(evstr[0],0,normValue,0);
+			}
+      causedEvent = true;
+	  }
+    mPrevAxisValues[ev.jaxis.which][ev.jaxis.axis] = ev.jaxis.value;
+    return causedEvent;		
+	}
+  case SDL_JOYBUTTONDOWN:
+  case SDL_JOYBUTTONUP:{
+			InputConfig* cfg = getInputConfigByDevice(ev.jbutton.which);
+			evstr = cfg->getMappedTo(Input(ev.jbutton.which, TYPE_BUTTON, ev.jbutton.button, ev.jbutton.state == SDL_PRESSED, false));
+			if( evstr.size() ) {
+				menu_layer_->keyboardEvent(evstr[0],0,ev.jbutton.state == SDL_PRESSED,0);
+			}
+		if( SDL_JOYBUTTONUP == ev.type && (ev.jbutton.button == select_button_ ||evstr[0]=="b")  ){
+			SDL_Event event = {};
+			event.type = showmenu_;
+			event.user.code = 0;
+			event.user.data1 = 0;
+			event.user.data2 = 0;
+			SDL_PushEvent(&event);
+		}
+      return true;
+	}
+  case SDL_JOYHATMOTION:{
+			InputConfig* cfg = getInputConfigByDevice(ev.jhat.which);
+	    evstr = cfg->getMappedTo( Input(ev.jhat.which, TYPE_HAT, ev.jhat.hat, ev.jhat.value, false));
+			if( evstr.size() != 0 ){
+				menu_layer_->keyboardEvent(evstr[0],0, (ev.jhat.value != 0) ,0);
+			}
+      return true;
+	}
+	case SDL_KEYDOWN:
+		if(ev.key.repeat)
+			return false;	
+
+		if( mKeyboardInputConfig )	{
+			evstr = mKeyboardInputConfig->getMappedTo(Input(DEVICE_KEYBOARD, TYPE_KEY, ev.key.keysym.sym, 1, false));
+			if( evstr.size() != 0 ){
+				menu_layer_->keyboardEvent(evstr[0],0,1,0);
+			}
+			return true;
+		}else{
+			return false;
+		}
+		break;
+  case SDL_KEYUP:
+		if( mKeyboardInputConfig )	{
+			evstr = mKeyboardInputConfig->getMappedTo(Input(DEVICE_KEYBOARD, TYPE_KEY, ev.key.keysym.sym, 0, false));
+			if( evstr.size() != 0 ){
+				menu_layer_->keyboardEvent(evstr[0],0,0,0);
+			}
+			return true;
+		}else{
+			return false;
+		}
+		break;
+	}
+	return false;
+}
 
 bool InputManager::parseEvent(const SDL_Event& ev)
 {
+	if( this->menu_layer_) {
+		return parseEventMenu(ev);
+	}
 	bool causedEvent = false;
-	//printf("InputManager::parseEvent \n");
 	switch(ev.type)
 	{
-/*		
-	case SDL_JOYAXISMOTION:
-		//if it switched boundaries
-		if((abs(ev.jaxis.value) > DEADZONE) != (abs(mPrevAxisValues[ev.jaxis.which][ev.jaxis.axis]) > DEADZONE))
-		{
-			int normValue;
-			if(abs(ev.jaxis.value) <= DEADZONE)
-				normValue = 0;
-			else
-				if(ev.jaxis.value > 0)
-					normValue = 1;
-				else
-					normValue = -1;
-
-			//window->input(getInputConfigByDevice(ev.jaxis.which), Input(ev.jaxis.which, TYPE_AXIS, ev.jaxis.axis, normValue, false));
-			//PerAxisValue(MAKE_PAD(player,key),val); 
-			causedEvent = true;
+  case SDL_JOYBUTTONUP:{
+		if( ev.jbutton.button == select_button_ ){
+			SDL_Event event = {};
+			event.type = showmenu_;
+			event.user.code = 0;
+			event.user.data1 = 0;
+			event.user.data2 = 0;
+			SDL_PushEvent(&event);
 		}
-
-		mPrevAxisValues[ev.jaxis.which][ev.jaxis.axis] = ev.jaxis.value;
-		return causedEvent;
-
-	case SDL_JOYBUTTONDOWN:
-		PerKeyDown( ev.jbutton.button );
-		return true;
-	case SDL_JOYBUTTONUP:
-		PerKeyUp( ev.jbutton.button );
-		//window->input(getInputConfigByDevice(ev.jbutton.which), Input(ev.jbutton.which, TYPE_BUTTON, ev.jbutton.button, ev.jbutton.state == SDL_PRESSED, false));
-		return true;
-
-	case SDL_JOYHATMOTION:
-	{
-		switch(ev.jhat.value){
-		case SDL_HAT_CENTERED:
-			PerKeyUp( SDL_HAT_UP );
-			PerKeyUp( SDL_HAT_DOWN );
-			PerKeyUp( SDL_HAT_LEFT );
-			PerKeyUp( SDL_HAT_RIGHT );
-			break;
-		case SDL_HAT_UP:
-			PerKeyDown( SDL_HAT_UP );
-			PerKeyUp( SDL_HAT_DOWN );
-			PerKeyUp( SDL_HAT_LEFT );
-			PerKeyUp( SDL_HAT_RIGHT );
-			break;
-		case SDL_HAT_RIGHT:
-			PerKeyUp( SDL_HAT_UP );
-			PerKeyUp( SDL_HAT_DOWN );
-			PerKeyUp( SDL_HAT_LEFT );
-			PerKeyDown( SDL_HAT_RIGHT );
-			break;
-		case SDL_HAT_DOWN:
-			PerKeyUp( SDL_HAT_UP );
-			PerKeyDown( SDL_HAT_DOWN );
-			PerKeyUp( SDL_HAT_LEFT );
-			PerKeyUp( SDL_HAT_RIGHT );
-			break;
-		case SDL_HAT_LEFT:
-			PerKeyUp( SDL_HAT_UP );
-			PerKeyUp( SDL_HAT_DOWN );
-			PerKeyDown( SDL_HAT_LEFT );
-			PerKeyUp( SDL_HAT_RIGHT );
-			break;
-		case SDL_HAT_RIGHTUP:
-			PerKeyDown( SDL_HAT_UP );
-			PerKeyUp( SDL_HAT_DOWN );
-			PerKeyUp( SDL_HAT_LEFT );
-			PerKeyDown( SDL_HAT_RIGHT );		
-			break;
-		case SDL_HAT_RIGHTDOWN:
-			PerKeyUp( SDL_HAT_UP );
-			PerKeyDown( SDL_HAT_DOWN );
-			PerKeyUp( SDL_HAT_LEFT );
-			PerKeyDown( SDL_HAT_RIGHT );		
-			break;
-		case SDL_HAT_LEFTUP:
-			PerKeyDown( SDL_HAT_UP );
-			PerKeyUp( SDL_HAT_DOWN );
-			PerKeyDown( SDL_HAT_LEFT );
-			PerKeyUp( SDL_HAT_RIGHT );		
-			break;
-		case SDL_HAT_LEFTDOWN:
-			PerKeyUp( SDL_HAT_UP );
-			PerKeyDown( SDL_HAT_DOWN );
-			PerKeyDown( SDL_HAT_LEFT );
-			PerKeyUp( SDL_HAT_RIGHT );		
-			break;
-		}
-
-	}
-		//window->input(getInputConfigByDevice(ev.jhat.which), Input(ev.jhat.which, TYPE_HAT, ev.jhat.hat, ev.jhat.value, false));
-		return true;
-*/
+    return true;
+	}		
 	case SDL_KEYDOWN:
-		if(ev.key.keysym.sym == SDLK_BACKSPACE && SDL_IsTextInputActive())
-		{
-			//window->textInput("\b");
-		}
-
 		if(ev.key.repeat)
 			return false;
-
 		if(ev.key.keysym.sym == SDLK_ESCAPE)
 		{
-			SDL_Event* quit = new SDL_Event();
-			quit->type = SDL_QUIT;
-			SDL_PushEvent(quit);
+			SDL_Event event = {};
+			event.type = showmenu_;
+			event.user.code = 0;
+			event.user.data1 = 0;
+			event.user.data2 = 0;
+			SDL_PushEvent(&event);
 			return false;
 		}
-
-		//printf("SDL_KEYDOWN %d",ev.key.keysym.sym );
 		PerKeyDown( ev.key.keysym.sym );
-		//window->input(getInputConfigByDevice(DEVICE_KEYBOARD), Input(DEVICE_KEYBOARD, TYPE_KEY, ev.key.keysym.sym, 1, false));
 		return true;
-
 	case SDL_KEYUP:
 	 	PerKeyUp( ev.key.keysym.sym );
-		//window->input(getInputConfigByDevice(DEVICE_KEYBOARD), Input(DEVICE_KEYBOARD, TYPE_KEY, ev.key.keysym.sym, 0, false));
 		return true;
-
-	case SDL_TEXTINPUT:
-		//window->textInput(ev.text.text);
-		break;
-
 	case SDL_JOYDEVICEADDED:
 		addJoystickByDeviceIndex(ev.jdevice.which); // ev.jdevice.which is a device index
 		return true;
-
 	case SDL_JOYDEVICEREMOVED:
 		removeJoystickByJoystickID(ev.jdevice.which); // ev.jdevice.which is an SDL_JoystickID (instance ID)
 		return false;
 	}
-
 	return false;
 }
 
@@ -545,7 +573,7 @@ bool InputManager::loadInputConfig(InputConfig* config)
 	std::string path = getConfigPath();
 	if(!fs::exists(path)){
 
-		printf("loadInputConfig %s is not found!\n", path.c_str() );
+		LOG("loadInputConfig %s is not found!\n", path.c_str() );
 
 		return false;
 	}
