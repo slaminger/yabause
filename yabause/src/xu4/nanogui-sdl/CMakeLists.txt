@@ -12,8 +12,8 @@ if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ext/eigen/Eigen")
     "by calling \"git submodule update --init --recursive\"")
 endif()
 
-option(NANOGUISDL_BUILD_EXAMPLE "Build NanoGUI example application?" ON)
-option(NANOGUISDL_BUILD_SHARED  "Build NanoGUI as a shared library?" ON)
+option(NANOGUISDL_BUILD_EXAMPLE "Build NanoGUI example application?" OFF)
+option(NANOGUISDL_BUILD_SHARED  "Build NanoGUI as a shared library?" OFF)
 
 #if(NANOGUI_GL_IMPLEMENTATION MATCHES "gl2" OR NOT DEFINED NANOGUI_GL_IMPLEMENTATION)
 #    add_definitions(-DNANOVG_GL2_IMPLEMENTATION)
@@ -212,7 +212,7 @@ if (NANOGUISDL_BUILD_SHARED AND NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
     add_custom_command(TARGET nanogui POST_BUILD COMMAND strip -u -r ${CMAKE_CURRENT_BINARY_DIR}/libnanogui.dylib)
   elseif(UNIX)
     # Strip .so library on Linux
-    add_custom_command(TARGET nanogui POST_BUILD COMMAND strip ${CMAKE_CURRENT_BINARY_DIR}/libnanogui.so)
+    #add_custom_command(TARGET nanogui POST_BUILD COMMAND strip ${CMAKE_CURRENT_BINARY_DIR}/libnanogui.so)
   endif()
 endif()
 
