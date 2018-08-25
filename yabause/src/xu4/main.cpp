@@ -265,7 +265,7 @@ int main(int argc, char** argv)
       printf("  -r NUMBER  --resolution_mode NUMBER      0 .. Native, 1 .. 4x, 2 .. 2x, 3 .. Original\n");
       printf("  -a         --keep_aspect_rate\n");
       printf("  -s NUMBER  --scps_sync_per_frame NUMBER\n");
-      printf("  -f         --frame_skip\n");    
+      printf("  -nf         --no_frame_skip              disable frame skip\n");    
       printf("  -v         --version\n");    
       exit(0);
     }
@@ -289,8 +289,8 @@ int main(int argc, char** argv)
 		else if(( x == "-s" || x == "--g_scsp_sync")&& (i+1<all_args.size() ) ) {
       g_scsp_sync = std::stoi( all_args[i+1] );
     }
-		else if(( x == "-f" || x == "--frame_skip") ) {
-      g_frame_skip = 1;
+		else if(( x == "-nf" || x == "--no_frame_skip") ) {
+      g_frame_skip = 0;
     }
 		else if(( x == "-v" || x == "--version") ) {
       printf("YabaSanshiro version %s(%s)\n",YAB_VERSION, GIT_SHA1 );
