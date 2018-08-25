@@ -52,4 +52,11 @@ public:
 
 	uint32_t pad_ = 0;
 	void setTogglePadModeMenuEventCode( uint32_t type ){ pad_ = type; }
+
+	uint32_t toggile_fps_ = 0;
+	void setToggleFpsCode( uint32_t type ){ toggile_fps_ = type; }
+
+	uint32_t toggile_frame_skip_ = 0;
+	void setToggleFrameSkip( uint32_t type ){ toggile_frame_skip_ = type; }
+
 };

@@ -21,12 +21,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include <nanogui/layout.h>
 #include <nanogui/label.h>
 #include <nanogui/button.h>
+#include "../config.h"
 
 
 MenuScreen::MenuScreen( SDL_Window* pwindow, int rwidth, int rheight )
 : nanogui::Screen( pwindow, Eigen::Vector2i(rwidth, rheight), "Menu Screen"){
   
-        window = new Window(this, "Yaba Sanshiro Menu");
+  std::string title = "Yaba Sanshiro "+ std::string(YAB_VERSION) +" Menu";
+        window = new Window(this, title);
         window->setPosition(Vector2i(0, 0));
         window->setLayout(new GroupLayout());
 
@@ -54,6 +56,30 @@ MenuScreen::MenuScreen( SDL_Window* pwindow, int rwidth, int rheight )
           event.user.data2 = 0;
           SDL_PushEvent(&event);          
         });
+
+        Button *b2 = new Button(tools, "Show/Hide FPS");
+        b2->setFixedWidth(248);
+        b2->setCallback([this]() { 
+          //printf("Reset\n");  
+          SDL_Event event = {};
+          event.type = toggile_fps_;
+          event.user.code = 0;
+          event.user.data1 = 0;
+          event.user.data2 = 0;
+          SDL_PushEvent(&event);          
+        });
+
+        Button *b3 = new Button(tools, "Enable/Disable Frame Skip");
+        b3->setFixedWidth(248);
+        b3->setCallback([this]() { 
+          //printf("Reset\n");  
+          SDL_Event event = {};
+          event.type = toggile_frame_skip_;
+          event.user.code = 0;
+          event.user.data1 = 0;
+          event.user.data2 = 0;
+          SDL_PushEvent(&event);          
+        });        
 
         //Button *b4 = new Button(tools, "Open CD Tray");
         //b4->setFixedWidth(120);

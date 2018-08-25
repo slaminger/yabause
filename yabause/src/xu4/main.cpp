@@ -123,18 +123,15 @@ VideoInterface_struct *VIDCoreList[] = {
 };
 
 
-//#ifdef YAB_PORT_OSD
-//#include "nanovg/nanovg_osdcore.h"
-//OSD_struct *OSDCoreList[] = {
-//  &OSDNnovg,
-//  NULL
-//};
-//#endif
-
+#ifdef YAB_PORT_OSD
+#include "nanovg/nanovg_osdcore.h"
 OSD_struct *OSDCoreList[] = {
+  &OSDNnovg,
   &OSDDummy,
   NULL
 };
+#endif
+
 
 static SDL_Window* wnd;
 static SDL_GLContext glc;
@@ -166,7 +163,7 @@ void YuiErrorMsg(const char *string)
 void YuiSwapBuffers(void)
 {
   SDL_GL_SwapWindow(wnd);
-  //SetOSDToggle(g_EnagleFPS);
+  SetOSDToggle(g_EnagleFPS);
 }
 
 int YuiRevokeOGLOnThisThread(){
@@ -233,8 +230,8 @@ int yabauseinit()
   }
 
   inputmng->init();
-  //OSDInit(0);
-  //OSDChangeCore(OSDCORE_NANOVG);
+  OSDInit(0);
+  OSDChangeCore(OSDCORE_NANOVG);
   LogStart();
   LogChangeOutput(DEBUG_CALLBACK, NULL);
   return 0;
@@ -244,6 +241,8 @@ int main(int argc, char** argv)
 {
   inputmng = InputManager::getInstance();
   
+  printf("\033[2J");
+
   // Inisialize home directory
   std::string home_dir = getenv("HOME");
   home_dir += "/.yabasanshiro";
@@ -383,6 +382,12 @@ int main(int argc, char** argv)
   Uint32  evPadMenu = SDL_RegisterEvents(1);
   menu->setTogglePadModeMenuEventCode(evPadMenu);
 
+  Uint32  evToggleFps = SDL_RegisterEvents(1);
+  menu->setToggleFpsCode(evToggleFps);
+
+  Uint32  evToggleFrameSkip = SDL_RegisterEvents(1);
+  menu->setToggleFrameSkip(evToggleFrameSkip);
+
   int padmode = 0;
   
   bool menu_show = false;
@@ -394,7 +399,7 @@ int main(int argc, char** argv)
     LOG("sched_setscheduler");
   }
   setpriority( PRIO_PROCESS, 0, -8);
-
+  int frame_cont = 0;
   while(true) {
     SDL_Event e;
     while(SDL_PollEvent(&e)) {
@@ -459,6 +464,33 @@ int main(int argc, char** argv)
         SNDSDL.UnMuteAudio();         
       }
 
+      else if(e.type == evToggleFps ){
+        if( g_EnagleFPS == 0 ){
+          g_EnagleFPS = 1;
+        }else{
+          g_EnagleFPS = 0;
+        }
+        menu_show = false;
+        inputmng->setMenuLayer(nullptr);
+        SDL_GL_MakeCurrent(wnd,nullptr);
+        VdpResume();
+        SNDSDL.UnMuteAudio();         
+      }
+
+      else if(e.type == evToggleFrameSkip ){
+        if( g_frame_skip == 0 ){
+          g_frame_skip = 1;
+          EnableAutoFrameSkip();
+        }else{
+          g_frame_skip = 0;
+          DisableAutoFrameSkip();
+        }
+        menu_show = false;
+        inputmng->setMenuLayer(nullptr);
+        SDL_GL_MakeCurrent(wnd,nullptr);
+        VdpResume();
+        SNDSDL.UnMuteAudio();         
+      }
       inputmng->parseEvent(e);
       if( menu_show ){
         menu->onEvent( e );
@@ -472,6 +504,8 @@ int main(int argc, char** argv)
       menu->drawAll();
       SDL_GL_SwapWindow(wnd);
     }else{
+      //printf("\033[%d;%dH Frmae = %d \n", 0, 0, frame_cont);
+      //frame_cont++;
       YabauseExec(); // exec one frame
     }
   }
