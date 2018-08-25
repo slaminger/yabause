@@ -26,6 +26,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <sys/resource.h>
+#include <errno.h>
+#include <pthread.h>
+
 #include <SDL2/SDL.h>
 #define GL_GLEXT_PROTOTYPES 1
 #include <SDL2/SDL_opengles2.h>
@@ -138,7 +142,7 @@ int g_EnagleFPS = 0;
 int g_resolution_mode = 0;
 int g_keep_aspect_rate = 0;
 int g_scsp_sync = 1;
-int g_frame_skip = 0;
+int g_frame_skip = 1;
 int g_emulated_bios = 1;
 InputManager* inputmng;
 MenuScreen * menu;
@@ -383,6 +387,13 @@ int main(int argc, char** argv)
   
   bool menu_show = false;
   std::string tmpfilename = home_dir + "tmp.png";
+
+  struct sched_param thread_param;
+  thread_param.sched_priority = 15; //sched_get_priority_max(SCHED_FIFO);
+  if ( pthread_setschedparam(pthread_self(), SCHED_FIFO, &thread_param) < -1 ) {
+    LOG("sched_setscheduler");
+  }
+  setpriority( PRIO_PROCESS, 0, -8);
 
   while(true) {
     SDL_Event e;

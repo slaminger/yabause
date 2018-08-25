@@ -339,18 +339,26 @@ extern int __sched_cpucount(size_t setsize, cpu_set_t* set);
 
 void YabThreadSetCurrentThreadAffinityMask(int mask)
 {
-#if 1 // it needs more than android-21
+#if 0 // it needs more than android-21
     int err, syscallres;
 #ifdef SYS_gettid
     pid_t pid = syscall(SYS_gettid);
 #else
     pid_t pid = gettid();
 #endif    
-	cpu_set_t my_set;        /* Define your cpu_set bit mask. */
-	CPU_ZERO(&my_set);       /* Initialize it all to 0, i.e. no CPUs selected. */
-	//CPU_SET(mask, &my_set);
-	CPU_SET(mask+4, &my_set);
-	sched_setaffinity(pid,sizeof(my_set), &my_set);
+    mask = 1 << mask;
+    syscallres = syscall(__NR_sched_setaffinity, pid, sizeof(mask), &mask);
+    if (syscallres)
+    {
+        err = errno;
+        //LOG("Error in the syscall setaffinity: mask=%d=0x%x err=%d=0x%x", mask, mask, err, err);
+    }
+
+//	cpu_set_t my_set;        /* Define your cpu_set bit mask. */
+//	CPU_ZERO(&my_set);       /* Initialize it all to 0, i.e. no CPUs selected. */
+//	CPU_SET(mask, &my_set);
+//	CPU_SET(mask+4, &my_set);
+//	sched_setaffinity(pid,sizeof(my_set), &my_set);
 #endif
 }
 

@@ -1418,6 +1418,8 @@ int get_sdl_shift(int sdl)
    else return (7 - sdl);
 }
 
+
+
 void generate_sample(struct Scsp * s, int rbp, int rbl, s16 * out_l, s16* out_r, int mvol, s16 cd_in_l, s16 cd_in_r)
 {
    int step_num = 0;
@@ -1482,7 +1484,7 @@ void generate_sample(struct Scsp * s, int rbp, int rbl, s16 * out_l, s16* out_r,
 	   scsp_dsp.last_step = i + 1;
 	   scsp_dsp.updated = 0;
    }
-     
+
    for (i = 0; i < scsp_dsp.last_step; i++)
       ScspDspExec(&scsp_dsp, i, SoundRam);
 
@@ -5425,6 +5427,10 @@ void ScspExec(){
   ScspInternalVars->scsptiming1++;
 #else
 
+#include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
+#define __STDC_FORMAT_MACROS
 
 void ScspAsynMain( void * p ){
 
@@ -5433,21 +5439,26 @@ void ScspAsynMain( void * p ){
   u64 difftime;
   const int samplecnt = 256; // 11289600/44100
   const int step = 16;
-  int frame = 0;
+  int frame = 0; 
   int frame_count = 0;
   int i;
-  int frame_div = g_scsp_sync_count_per_frame;
+  int frame_div = 1; //g_scsp_sync_count_per_frame;
   int framecnt = 188160 / frame_div; // 11289600/60
 
 #if defined(ARCH_IS_LINUX)
   struct timespec tm;
-  setpriority( PRIO_PROCESS, 0, -20);
+  struct sched_param thread_param;
+  thread_param.sched_priority = 15; //sched_get_priority_max(SCHED_FIFO);
+  if ( pthread_setschedparam(pthread_self(), SCHED_FIFO, &thread_param) < -1 ) {
+    LOG("sched_setscheduler");
+  }
+  setpriority( PRIO_PROCESS, 0, -10);
 #endif
 
   // Special for Thunder Force V
   char * pCurrentGame = Cs2GetCurrentGmaecode();
   if (!strcmp(pCurrentGame, "T-1811G") && frame_div < 4) {
-    frame_div = 4;
+    frame_div = 4; 
     framecnt = 188160 / frame_div;
     LOG("Thunder Force V is detected. Force frame_div to 4");
   }
@@ -5486,29 +5497,43 @@ void ScspAsynMain( void * p ){
         ScspExecAsync();
         frame_count = 0;
       }
-      int sleeptime = 0;
-      int initsleeptime = 0;
+      s64 sleeptime = 0;
+      s64 initsleeptime = 0;
       u64 initnow = 0;
+      u64 initbefore = 0;
       u64 checktime = 0;
       u64 sleepchecktime = 0;
       m68kcycle = 0;
       sh2_read_req = 0;
       do {
         now = YabauseGetTicks() * 1000000000L / yabsys.tickfreq;
-        if (now > before){
+        if (now >= before){
           difftime = now - before;
         }
         else{
           difftime = now + (ULLONG_MAX - before);
         }
         sleeptime = ((16666666L / frame_div) - difftime);
-        if(initsleeptime==0){initsleeptime = sleeptime; initnow = now; }
+        if(initsleeptime==0){
+          initsleeptime = sleeptime; 
+          initnow = now; 
+          initbefore = before;
+        }
         if( sleeptime < 0 ) break;
-#if defined(ANDROID)
-        tm.tv_sec = 0;
-        tm.tv_nsec = sleeptime;
+#if 0 //defined(ANDROID)
+        //tm.tv_sec = 0;
+        //tm.tv_nsec = sleeptime;
+
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &tm);
+        ts.tv_nsec = tm.tv_nsec + sleeptime;
+        if( tm.tv_nsec > ts.tv_nsec ){
+          tm.tv_sec += 1;
+        }
+        tm.tv_nsec = ts.tv_nsec;
+
         pthread_mutex_lock(&sync_mutex);
-        int rtn = pthread_cond_timedwait_relative_np(&sync_cnd,&sync_mutex,&tm);
+        int rtn = pthread_cond_timedwait(&sync_cnd,&sync_mutex,&tm);
         if(rtn == 0){
           for (i = 0; i < samplecnt; i += step) {
             MM68KExec(step);
@@ -5567,7 +5592,8 @@ void ScspAsynMain( void * p ){
       } while (sleeptime > 0);
 
       checktime = YabauseGetTicks() * 1000000000 / yabsys.tickfreq;
-      //yprintf("vsynctime = %d(%d) %d(%d)\n", (s32)(checktime - before),16666666/frame_div,(s32)(checktime - initnow),initsleeptime);
+      //printf("vsynctime = %d(%d) %d(%d)\n", (s32)(checktime - before),16666666/frame_div,(s32)(checktime - initnow),(s32)initsleeptime);
+      //printf("vsynctime = %d(%d) %"PRIu64"-%"PRIu64"=(%"PRId64")\n", (s32)(checktime - before),16666666/frame_div,now,before,initsleeptime);
       before = checktime;
     }
     
