@@ -320,20 +320,20 @@ void OSDGlutDisplayMessage(OSDMessage_struct * message, pixel_t * buffer, int w,
 
    msglength = strlen(message->message);
 
-   glBegin(GL_POLYGON);
-      glColor3f(0, 0, 0);
-      glVertex2i(LeftX, TxtY);
-      glVertex2i(LeftX + Width, TxtY);
-      glVertex2i(LeftX + Width, TxtY + Height);
-      glVertex2i(LeftX, TxtY + Height);
-   glEnd();
+   //glBegin(GL_POLYGON);
+   //   glColor3f(0, 0, 0);
+   //   glVertex2i(LeftX, TxtY);
+   //   glVertex2i(LeftX + Width, TxtY);
+   //   glVertex2i(LeftX + Width, TxtY + Height);
+   //   glVertex2i(LeftX, TxtY + Height);
+   //glEnd();
 
-   glColor3f(1.0f, 1.0f, 1.0f);
-   glRasterPos2i(10, TxtY + 11);
-   for (i = 0; i < msglength; i++) {
-      glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, message->message[i]);
-   }
-   glColor3f(1, 1, 1);
+   //glColor3f(1.0f, 1.0f, 1.0f);
+   //glRasterPos2i(10, TxtY + 11);
+   //for (i = 0; i < msglength; i++) {
+   //   glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, message->message[i]);
+  // }
+   //glColor3f(1, 1, 1);
 }
 
 int OSDGlutUseBuffer(void)

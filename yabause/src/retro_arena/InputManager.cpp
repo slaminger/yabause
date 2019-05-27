@@ -45,6 +45,7 @@ using json = nlohmann::json;
 static unsigned int SDL_HAT_VALUES[] = { SDL_HAT_UP, SDL_HAT_RIGHT, SDL_HAT_LEFT, SDL_HAT_DOWN };
 static const unsigned int SDL_HAT_VALUES_NUM = sizeof(SDL_HAT_VALUES) / sizeof(SDL_HAT_VALUES[0]);
 
+
 #define KEYBOARD_GUID_STRING "-1"
 
 // SO HEY POTENTIAL POOR SAP WHO IS TRYING TO MAKE SENSE OF ALL THIS (by which I mean my future self)
@@ -122,8 +123,13 @@ int setPlayerKeys( void * padbits, int user, int joyId, const json & player ){
     if( player.find("r") != player.end())PerSetKey(genidjson(user,joyId,player["r"]),PERPAD_RIGHT_TRIGGER, padbits);    
     if( player.find("analogx") != player.end())  PerSetKey(genidjson(user,joyId,player["analogx"]), PERANALOG_AXIS1, padbits);
     if( player.find("analogy") != player.end()) PerSetKey(genidjson(user,joyId,player["analogy"]), PERANALOG_AXIS2, padbits);
+#if defined(__SWITCH__)
+    PerSetKey(MAKE_PAD(0,((joyId << 18)|SDL_MEDIUM_AXIS_VALUE|SWITCH_LTRIGGER)), PERANALOG_AXIS3, padbits);
+    PerSetKey(MAKE_PAD(0,((joyId << 18)|SDL_MEDIUM_AXIS_VALUE|SWITCH_RTRIGGER)), PERANALOG_AXIS4, padbits);
+#else
     if( player.find("analogleft") != player.end()) PerSetKey(genidjson(user,joyId,player["analogleft"]), PERANALOG_AXIS3, padbits);
     if( player.find("analogright") != player.end()) PerSetKey(genidjson(user,joyId,player["analogright"]), PERANALOG_AXIS4, padbits);  
+#endif    
 }
 
 void InputManager::genJoyString( string & out, SDL_JoystickID id, const string & name, const string & guid ){
@@ -787,7 +793,14 @@ int InputManager::handleJoyEvents(void) {
     for ( i = 0; i < SDL_JoystickNumAxes( joy ); i++ )
     {
       cur = SDL_JoystickGetAxis( joy, i );
-      
+#if defined(__SWITCH__)      
+      if( i == SWITCH_BROKEN_AIX ){
+        continue;
+      }
+      if( i == SWITCH_INVERSE_AIX ){
+        cur = SDL_MAX_AXIS_VALUE - cur;
+      }
+#endif      
       PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, (u8)(((int)cur+32768) >> 8));
       
       if ( cur < -SDL_MEDIUM_AXIS_VALUE )
@@ -817,12 +830,22 @@ int InputManager::handleJoyEvents(void) {
       if ( buttonState == SDL_BUTTON_PRESSED )
       {
         PerKeyDown( (joyId << 18) | (i) );
-        //printf("SDL_BUTTON_PRESSED %d",(i));
+        //printf("SDL_BUTTON_PRESSED %d\n",(i));
+#if defined(__SWITCH__)
+        if( i == SWITCH_LTRIGGER || i == SWITCH_RTRIGGER ){
+          PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, 255);
+        }
+#endif
       }
       else if ( buttonState == SDL_BUTTON_RELEASED )
       {
         PerKeyUp( (joyId << 18) | (i) );
         //printf("SDL_BUTTON_RELEASED %d\n",(i +1));
+#if defined(__SWITCH__)        
+        if( i == SWITCH_LTRIGGER || i == SWITCH_RTRIGGER ){
+          PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, 0);
+        }
+#endif        
       }
     }
 
@@ -1041,6 +1064,26 @@ bool InputManager::parseEvent(const SDL_Event& ev)
 
 bool InputManager::loadInputConfig(InputConfig* config)
 {
+#if defined(__SWITCH__)  
+  config->clear();
+  config->mapInput("up", Input(0, TYPE_BUTTON, 14, 1, true));
+  config->mapInput("down", Input(0, TYPE_BUTTON, 15, 1, true));
+  config->mapInput("left", Input(0, TYPE_BUTTON, 16, 1, true));
+  config->mapInput("right", Input(0, TYPE_BUTTON, 17, 1, true));
+  config->mapInput("a", Input(0, TYPE_BUTTON, 0, 1, true));
+  config->mapInput("b", Input(0, TYPE_BUTTON, 1, 1, true));
+  config->mapInput("start", Input(0, TYPE_BUTTON, 10, 1, true));
+  config->mapInput("select", Input(0, TYPE_BUTTON, 9, 1, true));
+
+  std::string keymap_fname = getenv("HOME");
+  keymap_fname += "/.yabasanshiro/keymapv2.json";
+  std::string src_keymap_fname = "/usr/share/yabasanshiro/keymapv2_switch.json";
+
+  if(!fs::exists(keymap_fname)){
+      fs::copy(src_keymap_fname, keymap_fname);
+  }
+  return true;
+#endif  
   std::string path = getConfigPath();
   if(!fs::exists(path)){
     PADLOG("loadInputConfig %s is not found!\n", path.c_str() );

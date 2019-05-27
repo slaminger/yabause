@@ -18,6 +18,11 @@ struct MenuInput {
 	SDL_JoystickID select_device_ = -1;
 };
 
+// For SWITCH joy con
+#define SWITCH_BROKEN_AIX 2
+#define SWITCH_INVERSE_AIX 1
+#define SWITCH_LTRIGGER 7
+#define SWITCH_RTRIGGER 8
 
 //you should only ever instantiate one of these, by the way
 class InputManager

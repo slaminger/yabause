@@ -5,8 +5,8 @@ add_definitions( -D__RETORO_ARENA__ )
 yab_port_start()
 
 
-find_package(SDL2 COMPONENTS sdl)
-find_package(SDL2 REQUIRED)
+#find_package(SDL2 COMPONENTS sdl)
+#find_package(SDL2 REQUIRED)
 find_package(OpenGLES)
 find_package(PkgConfig REQUIRED)
 
@@ -51,7 +51,7 @@ ExternalProject_Add(
 set(EXTERNAL_JSON_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/Json/src/Json/single_include")
 
 set(PORT_INCLUDE_DIRS ${EXTERNAL_JSON_INCLUDE_DIR} ${SDL2_INCLUDE_DIR} ${png_INCLUDE_DIR} ${zlib_INCLUDE_DIR} )
-set(PORT_LIBRARIES ${SDL2_LIBRARY} ${OPENGLES2_LIBRARIES} ${png_STATIC_LIBRARIES} ${zlib_STATIC_LIBRARIES} )
+set(PORT_LIBRARIES ${OPENGLES2_LIBRARIES} ${png_STATIC_LIBRARIES} ${zlib_STATIC_LIBRARIES} )
 
 message("Nlohmann/json dir =" ${EXTERNAL_JSON_INCLUDE_DIR})
 
@@ -68,13 +68,19 @@ set(yabause_ra_SOURCES
 include_directories( ${PORT_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} "nanogui-sdl/include" "nanogui-sdl/ext/eigen" )
 add_executable(yabause-retro-arena ${yabause_ra_SOURCES})
 target_link_libraries(yabause-retro-arena yabause  ${Boost_LIBRARIES} pugixml ${YABAUSE_LIBRARIES} ${PORT_LIBRARIES} nanogui )
-add_dependencies(yabause-retro-arena Json png zlib)
+add_dependencies(yabause-retro-arena Json png zlib sdl2)
 yab_port_success(yabause-retro-arena)
 set_target_properties(yabause-retro-arena PROPERTIES OUTPUT_NAME yabasanshiro)
 
-
+if( INSTALL_RETRO_ARENA )
 install(TARGETS yabause-retro-arena DESTINATION "/opt/retroarena/emulators/yabause/")
 install(FILES "README.md" DESTINATION "/opt/retroarena/emulators/yabause/" )
+else()
+	install(TARGETS yabause-retro-arena RUNTIME DESTINATION "bin")
+install(FILES "README.md" DESTINATION "share/yabasanshiro" )
+install(FILES "keymapv2_switch.json" DESTINATION "share/yabasanshiro")
+
+endif()
 
 #install(TARGETS yabause-retoro-arena DESTINATION "bin")
 #install(FILES "README.md" DESTINATION "." )

@@ -32,8 +32,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 #include "InputManager.h"
 
-//#define MENU_LOG
-#define MENU_LOG printf
+#define MENU_LOG
+//#define MENU_LOG printf
 
 using namespace std;
 
@@ -574,14 +574,14 @@ void MenuScreen::setupPlayerPsuhButton( int user_index, PopupButton *player, con
   b->setCallback([this, user_index]{
     getSelectedGUID( user_index, this->cuurent_deviceguid_ );
     if( this->cuurent_deviceguid_ != "Keyboard_-1"){
-      showInputCheckDialog("analogl");
+      showInputCheckDialog("analogleft");
     }
   });   
   b = new Button(popup, "Analog R");
   b->setCallback([this, user_index]{
     getSelectedGUID( user_index, this->cuurent_deviceguid_ );
     if( this->cuurent_deviceguid_ != "Keyboard_-1"){
-      showInputCheckDialog("analogr");
+      showInputCheckDialog("analogright");
     }
   });   
 }
@@ -598,7 +598,9 @@ int MenuScreen::OnInputSelected( string & type, int & id, int & value ){
 int MenuScreen::onRawInputEvent( InputManager & imp, const std::string & deviceguid, const std::string & type, int id, int value ){
   if( swindow == nullptr ){ return -1; }
   if( swindow->title() == "Select File"){ return -1; }
-
+#if defined(__SWITCH__)  
+  if( id == SWITCH_BROKEN_AIX && type == "axis" ){ return -1; }
+#endif  
   cout << "onRawInputEvent deviceguid:" << deviceguid << " type:" << type << " id:" << id << " val:" << value << endl;
 
   if( deviceguid != cuurent_deviceguid_ ){ 
