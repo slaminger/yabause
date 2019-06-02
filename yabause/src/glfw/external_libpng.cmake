@@ -24,10 +24,10 @@ set(png_INCLUDE_DIR ${png_INSTALL}/include)
 
 if(WIN32)
   set(png_STATIC_LIBRARIES 
-    debug ${CMAKE_CURRENT_BINARY_DIR}/png/install/lib/libpng12_staticd.lib
-    optimized ${CMAKE_CURRENT_BINARY_DIR}/png/install/lib/libpng12_static.lib)
+    debug ${CMAKE_CURRENT_BINARY_DIR}/png/install/lib/libpng16_staticd.lib
+    optimized ${CMAKE_CURRENT_BINARY_DIR}/png/install/lib/libpng16_static.lib)
 else()
-  set(png_STATIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/png/install/lib/libpng12.a)
+  set(png_STATIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/png/install/lib/libpng16.a)
 endif()
 
 set(png_HEADERS

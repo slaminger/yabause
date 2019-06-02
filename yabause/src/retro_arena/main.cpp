@@ -54,7 +54,7 @@ extern "C" {
 #include "sndsdl.h"
 #include "osdcore.h"
 #include "ygl.h"
-#include "libpng12/png.h"
+#include "libpng16/png.h"
 }
 
 #include "InputManager.h"
