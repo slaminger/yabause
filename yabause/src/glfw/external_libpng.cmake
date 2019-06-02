@@ -38,8 +38,10 @@ ExternalProject_Add(
     png
     PREFIX png
     DEPENDS zlib
-    URL ${png_URL}
-    URL_HASH ${png_HASH}
+    #URL ${png_URL}
+    #URL_HASH ${png_HASH}
+    GIT_REPOSITORY    git://git.code.sf.net/p/libpng/code
+    GIT_TAG           v1.6.9
     INSTALL_DIR ${png_INSTALL}
     DOWNLOAD_DIR "${DOWNLOAD_LOCATION}"
     CMAKE_ARGS
