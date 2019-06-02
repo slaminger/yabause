@@ -1,5 +1,11 @@
 cmake_minimum_required (VERSION 2.8.3)
 
+project(bin2c)
+SET(CMAKE_C_COMPILER /usr/bin/gcc)
+SET(CMAKE_C_FLAGS "" )
+# Run simple C converter to put font files into the data segment
+add_executable(bin2c resources/bin2c.c)
+
 project("NanoGUI-SDL")
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
@@ -117,7 +123,6 @@ endif()
 include_directories(ext ext/eigen include ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 # Run simple C converter to put font files into the data segment
-add_executable(bin2c resources/bin2c.c)
 set(bin2c_cmdline nanogui_resources.cpp nanogui_resources.h)
 file(GLOB resources "${CMAKE_CURRENT_SOURCE_DIR}/resources/*.ttf")
 foreach(file ${resources})

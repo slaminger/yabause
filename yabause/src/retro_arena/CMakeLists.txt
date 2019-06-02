@@ -10,7 +10,7 @@ yab_port_start()
 find_package(OpenGLES)
 find_package(PkgConfig REQUIRED)
 
-find_package(Boost REQUIRED COMPONENTS system filesystem date_time locale)
+find_package(Boost REQUIRED COMPONENTS system filesystem )
 
 if (NOT OPENGLES2_FOUND)
 	return()
@@ -51,7 +51,7 @@ ExternalProject_Add(
 set(EXTERNAL_JSON_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/Json/src/Json/single_include")
 
 set(PORT_INCLUDE_DIRS ${EXTERNAL_JSON_INCLUDE_DIR} ${SDL2_INCLUDE_DIR} ${png_INCLUDE_DIR} ${zlib_INCLUDE_DIR} )
-set(PORT_LIBRARIES ${OPENGLES2_LIBRARIES} ${png_STATIC_LIBRARIES} ${zlib_STATIC_LIBRARIES} )
+set(PORT_LIBRARIES ${OPENGLES2_LIBRARIES} ${png_STATIC_LIBRARIES} ${zlib_STATIC_LIBRARIES} dl)
 
 message("Nlohmann/json dir =" ${EXTERNAL_JSON_INCLUDE_DIR})
 

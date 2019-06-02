@@ -2,6 +2,9 @@ project(m68kmake)
 
 cmake_minimum_required(VERSION 2.6)
 
+SET(CMAKE_C_COMPILER gcc)
+SET(CMAKE_C_FLAGS "" )
+
 add_executable(m68kmake m68kmake.c)
 
 if (MSVC)

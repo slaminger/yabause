@@ -10,6 +10,9 @@ cmake_minimum_required(VERSION 2.8)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMakeTests)
 
+set( CMAKE_C_FLAGS "-D__SWITCH__ -D__RETORO_ARENA__ -D_POSIX_C_SOURCE=199309L ${CMAKE_C_FLAGS}" )
+set( CMAKE_CXX_FLAGS "-D__SWITCH__ -D__RETORO_ARENA__ -D_POSIX_C_SOURCE=199309L ${CMAKE_CXX_FLAGS}" )
+
 set(yabause_HEADERS
 	bios.h
 	cdbase.h cheat.h coffelf.h core.h cs0.h cs1.h cs2.h
