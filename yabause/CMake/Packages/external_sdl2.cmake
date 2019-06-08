@@ -9,7 +9,7 @@ include(ExternalProject)
 set(SDL2_LIBRARY
       ${CMAKE_CURRENT_BINARY_DIR}/sdl2-prefix/lib/libSDL2.a
       ${CMAKE_CURRENT_BINARY_DIR}/sdl2-prefix/lib/libSDL2main.a
-      dl sndio
+      dl
 )
 
 set(SDL2_INCLUDE_DIR
@@ -25,6 +25,8 @@ set(SDL2_VERSION "2.0.9")
       -DSDL_STATIC=ON
       -DSDL_SHARED=OFF
       -DSDL_STATIC_PIC=ON
+      -DSNDIO=OFF
+      -DOPENGL=OFF
       -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> 
       -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
       -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}

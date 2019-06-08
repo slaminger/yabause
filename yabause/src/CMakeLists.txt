@@ -324,6 +324,7 @@ if (YAB_WANT_OPENGL AND (YAB_RGB STREQUAL ""))
 		else()
 			add_definitions(-D_OGL3_)
 			set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${OPENGL_LIBRARIES})
+			add_definitions(-DYAB_ASYNC_RENDERING)
 		endif()
 		include_directories(./ ./nanovg)
 		set(yabause_SOURCES ${yabause_SOURCES} 
@@ -356,17 +357,15 @@ if (YAB_WANT_OPENGL AND (YAB_RGB STREQUAL ""))
 			#)
 			add_definitions(-DYAB_ASYNC_RENDERING)
 		endif()
-		if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-			add_definitions(-D_OGLES3_)
-			set(yabause_SOURCES ${yabause_SOURCES} 
-				yglcache.c
-				ygles.c
-				yglshaderes.c
-			)
-		endif()
-
-		if( USE_EGL )
-		else()
+		#if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+		#	add_definitions(-D_OGLES3_)
+		#	set(yabause_SOURCES ${yabause_SOURCES} 
+		#		yglcache.c
+		#		ygles.c
+		#		yglshaderes.c
+		#	)
+		#endif()
+		if( !USE_EGL AND WIN32 )
 			include(FindGLEW)
 			add_definitions(-D_USEGLEW_)
 			if (GLEW_FOUND)
