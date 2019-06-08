@@ -64,12 +64,85 @@ namespace fs = boost::filesystem;
 InputManager* InputManager::mInstance = NULL;
 void genJoyString( string & out, SDL_JoystickID id, const string & name, const string & guid );
 
+#include <sys/ioctl.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+#include <linux/input.h>
+#include <linux/joystick.h>
+#include "axbtnmap.h"
+
+
+
 InputManager::InputManager() : mKeyboardInputConfig(NULL)
 {
+#if DIRECT_MODE  
+  device_id_ = open("/dev/input/js0", O_RDONLY);
+
+	int version = 0x000800;
+
+	uint16_t btnmap[BTNMAP_SIZE];
+	uint8_t axmap[AXMAP_SIZE];
+
+	ioctl(device_id_, JSIOCGVERSION, &version);
+	ioctl(device_id_, JSIOCGAXES, &axes_);
+	ioctl(device_id_, JSIOCGBUTTONS, &buttons_);
+	ioctl(device_id_, JSIOCGNAME(NAME_LENGTH), device_name_);  
+
+	//getaxmap(device_id_, axmap);
+	//getbtnmap(device_id_, btnmap);
+
+  axis_ = (int*)calloc(axes_, sizeof(int));
+	button_ = (char*)calloc(buttons_, sizeof(char));
+  prestat_ = (char*)calloc(buttons_, sizeof(char));
+  trunning_ = 1;
+  
+  th_ = std::thread([this]{ 
+    
+    
+    int joyId = 0;
+    int i = 0;
+    struct js_event js;
+
+
+    //fcntl(device_id_, F_SETFL, O_NONBLOCK);
+
+    while(trunning_) {
+    //for( i=0 ; i<axes_+buttons_; i++ ) {
+      if (read(device_id_, &js, sizeof(struct js_event)) != sizeof(struct js_event)) {
+            //perror("\njstest: error reading");
+            //return 1;
+      }
+
+      switch(js.type & ~JS_EVENT_INIT) {
+        case JS_EVENT_BUTTON:
+          button_[js.number] = js.value;
+          break;
+        case JS_EVENT_AXIS:
+          axis_[js.number] = js.value;
+          break;
+      } 
+    }
+ 
+  });
+
+
+#endif  
+
 }
 
 InputManager::~InputManager()
 {
+  trunning_ = 0;
+  th_.join();
   deinit();
 }
 
@@ -713,6 +786,116 @@ int InputManager::handleJoyEventsMenu(void) {
   Uint8 oldHatState;
   int hatValue;
 
+#if DIRECT_MODE
+  {
+   
+    int joyId = 0;
+    int i = 0;
+
+    for (i = 0; i < axes_; i++){
+          //printf("%2d:%6d ", i, axis_[i]);
+          //PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, (u8)(((int)axis_[i]+32768) >> 8));
+    }
+
+    for (i = 0; i < buttons_; i++){
+          //printf("%2d:%s ", i, button_[i] ? "on " : "off");
+          if( button_[i] ){
+            //PerKeyDown( (joyId << 18) | (i) );
+            //if( i!=23) printf("SDL_BUTTON_PRESSED %d\n",(i));
+            if( i==9) select_press_ = 1;
+
+            if( prestat_[i] == 0 ){
+                prestat_[i] = 1;
+                switch(i){
+                case DIRECT_KEY_UP:
+                  menu_layer_->keyboardEvent("up",0,1,0);
+                  break;
+                case DIRECT_KEY_DOWN:
+                  menu_layer_->keyboardEvent("down",0,1,0);
+                  break;
+                case DIRECT_KEY_LEFT:
+                  menu_layer_->keyboardEvent("left",0,1,0);
+                  break;
+                case DIRECT_KEY_RIGHT:
+                  menu_layer_->keyboardEvent("right",0,1,0);
+                  break;
+                case DIRECT_KEY_A:
+                  menu_layer_->keyboardEvent("a",0,1,0);
+                  break;
+                case DIRECT_KEY_B:
+                  menu_layer_->keyboardEvent("b",0,1,0);
+                  break;
+                case DIRECT_KEY_SELECT:
+                  menu_layer_->keyboardEvent("select",0,1,0);
+                  break;
+                case DIRECT_KEY_START:
+                  menu_layer_->keyboardEvent("start",0,1,0);
+                  break;
+                }
+            } 
+
+          }else{
+            //PerKeyUp( (joyId << 18) | (i) );
+            if( i==9 && select_press_ == 1 ){
+              select_press_ = 0;
+              SDL_Event event = {};
+              event.type = showmenu_;
+              event.user.code = 0;
+              event.user.data1 = 0;
+              event.user.data2 = 0;
+              SDL_PushEvent(&event);
+            }
+
+            if( prestat_[i] != 0 ){
+                prestat_[i] = 0;
+                switch(i){
+                case DIRECT_KEY_UP:
+                  menu_layer_->keyboardEvent("up",0,0,0);
+                  break;
+                case DIRECT_KEY_DOWN:
+                  menu_layer_->keyboardEvent("down",0,0,0);
+                  break;
+                case DIRECT_KEY_LEFT:
+                  menu_layer_->keyboardEvent("left",0,0,0);
+                  break;
+                case DIRECT_KEY_RIGHT:
+                  menu_layer_->keyboardEvent("right",0,0,0);
+                  break;
+                case DIRECT_KEY_A:
+                  menu_layer_->keyboardEvent("a",0,0,0);
+                  break;
+                case DIRECT_KEY_B:
+                  menu_layer_->keyboardEvent("b",0,0,0);
+                  if( menu_layer_->onBackButtonPressed() == 0 ){
+                    SDL_Event event = {};
+                    event.type = showmenu_;
+                    event.user.code = 0;
+                    event.user.data1 = 0;
+                    event.user.data2 = 0;
+                    SDL_PushEvent(&event);
+                  }                    
+                  break;
+                case DIRECT_KEY_SELECT:
+                  menu_layer_->keyboardEvent("select",0,0,0);
+                  if( menu_layer_->onBackButtonPressed() == 0 ){
+                    SDL_Event event = {};
+                    event.type = showmenu_;
+                    event.user.code = 0;
+                    event.user.data1 = 0;
+                    event.user.data2 = 0;
+                    SDL_PushEvent(&event);
+                  }                  
+                  break;
+                case DIRECT_KEY_START:
+                  menu_layer_->keyboardEvent("start",0,0,0);
+                  break;
+                }
+            } 
+          }
+    }
+    return 0;
+  }
+#endif
   
   for( auto it = mJoysticks.begin(); it != mJoysticks.end() ; ++it ) {
 
@@ -765,7 +948,6 @@ int InputManager::handleJoyEventsMenu(void) {
 }
 
 
-
 int InputManager::handleJoyEvents(void) {
   int i;
   int j;
@@ -783,11 +965,62 @@ int InputManager::handleJoyEvents(void) {
     return handleJoyEventsMenu();
   }
 
+#if DIRECT_MODE
+  {
+   
+    int joyId = 0;
+    int i = 0;
+
+    for (i = 0; i < axes_; i++){
+          //printf("%2d:%6d ", i, axis_[i]);
+
+        if( i == SWITCH_INVERSE_AIX ){
+          int cur = SDL_MAX_AXIS_VALUE - axis_[i];
+          PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, (u8)(((int)cur+32768) >> 8));
+        } else {
+          PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, (u8)(((int)axis_[i]+32768) >> 8));
+        }
+    }
+
+    for (i = 0; i < buttons_; i++){
+          //printf("%2d:%s ", i, button_[i] ? "on " : "off");
+          if( button_[i] ){
+            PerKeyDown( (joyId << 18) | (i) );
+//            if( i!=23) printf("SDL_BUTTON_PRESSED %d\n",(i));
+
+            if( i==DIRECT_KEY_SELECT) select_press_ = 1;
+
+            if( i == SWITCH_LTRIGGER || i == SWITCH_RTRIGGER ){
+              PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, 255);
+            }
+
+          }else{
+            PerKeyUp( (joyId << 18) | (i) );
+
+            if( i == SWITCH_LTRIGGER || i == SWITCH_RTRIGGER ){
+              PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, 0);
+            }
+
+            if( i==DIRECT_KEY_SELECT && select_press_ == 1 ){
+              select_press_ = 0;
+              SDL_Event event = {};
+              event.type = showmenu_;
+              event.user.code = 0;
+              event.user.data1 = 0;
+              event.user.data2 = 0;
+              SDL_PushEvent(&event);
+            }
+          }
+    }
+    return 0;
+  }
+#endif
   // check each joysticks
   for( auto it = mJoysticks.begin(); it != mJoysticks.end() ; ++it ) {
     
     SDL_Joystick* joy = it->second;
     SDL_JoystickID joyId = SDL_JoystickInstanceID(joy);
+
 
     // check axis
     for ( i = 0; i < SDL_JoystickNumAxes( joy ); i++ )
@@ -846,6 +1079,8 @@ int InputManager::handleJoyEvents(void) {
           PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, 0);
         }
 #endif        
+      }else{
+        //printf("SDL_BUTTON_???? %d\n",(i));
       }
     }
 
@@ -944,7 +1179,7 @@ bool InputManager::parseEventMenu(const SDL_Event& ev ){
       }
     if( SDL_JOYBUTTONUP == ev.type && 
        ( evstr.size() > 0 && (evstr[0]=="b" || evstr[0]=="select") )  ){
-      printf("press back\n");
+      //printf("press back\n");
       if( menu_layer_->onBackButtonPressed() == 0 ){
         SDL_Event event = {};
         event.type = showmenu_;
@@ -1074,7 +1309,7 @@ bool InputManager::loadInputConfig(InputConfig* config)
   config->mapInput("b", Input(0, TYPE_BUTTON, 1, 1, true));
   config->mapInput("start", Input(0, TYPE_BUTTON, 10, 1, true));
   config->mapInput("select", Input(0, TYPE_BUTTON, 9, 1, true));
-
+/*
   std::string keymap_fname = getenv("HOME");
   keymap_fname += "/.yabasanshiro/keymapv2.json";
   std::string src_keymap_fname = "/usr/share/yabasanshiro/keymapv2_switch.json";
@@ -1082,6 +1317,7 @@ bool InputManager::loadInputConfig(InputConfig* config)
   if(!fs::exists(keymap_fname)){
       fs::copy(src_keymap_fname, keymap_fname);
   }
+*/  
   return true;
 #endif  
   std::string path = getConfigPath();

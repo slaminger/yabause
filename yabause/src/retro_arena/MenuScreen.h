@@ -74,7 +74,7 @@ public:
     
     
     MenuScreen( SDL_Window* pwindow, int rwidth, int rheight, const std::string & fname  );
-    virtual bool keyboardEvent( std::string & keycode , int scancode, int action, int modifiers);
+    virtual bool keyboardEvent( const std::string & keycode , int scancode, int action, int modifiers);
     virtual void draw(NVGcontext *ctx);
 
 	uint32_t reset_ = 0;

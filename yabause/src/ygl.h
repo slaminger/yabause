@@ -680,7 +680,7 @@ int YglCleanUpWindow(YglProgram * prg);
 void YglEraseWriteVDP1();
 void YglFrameChangeVDP1();
 
-
+/*
 #if !defined(__APPLE__) && !defined(__ANDROID__) && !defined(_USEGLEW_) && !defined(_OGLES3_) && !defined(__LIBRETRO__) &&  !defined(NX)
 
 extern GLuint (STDCALL *glCreateProgram)(void);
@@ -732,6 +732,7 @@ extern PFNGLUNIFORMMATRIX4FVPROC glUniformMatrix4fv;
 
 
 #endif // !defined(__APPLE__) && !defined(__ANDROID__) && !defined(_USEGLEW_)
+*/
 
 #if defined WORDS_BIGENDIAN
 #define SAT2YAB1(alpha,temp)      (alpha | (temp & 0x7C00) << 1 | (temp & 0x3E0) << 14 | (temp & 0x1F) << 27)

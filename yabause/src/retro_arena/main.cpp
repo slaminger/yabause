@@ -231,7 +231,7 @@ int yabauseinit()
   yinit.rotate_screen = 0;
   yinit.scsp_sync_count_per_frame = g_scsp_sync;
   yinit.extend_backup = 1;
-  yinit.scsp_main_mode = 1;
+  yinit.scsp_main_mode = 0;
 
   res = YabauseInit(&yinit);
   if( res == -1) {

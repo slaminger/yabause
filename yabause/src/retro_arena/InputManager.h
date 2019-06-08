@@ -24,6 +24,21 @@ struct MenuInput {
 #define SWITCH_LTRIGGER 7
 #define SWITCH_RTRIGGER 8
 
+// For SWITCH Direct mode ( do not use SDL mode )
+#define DIRECT_MODE 1
+#define DIRECT_KEY_UP 14
+#define DIRECT_KEY_DOWN 15
+#define DIRECT_KEY_LEFT 16
+#define DIRECT_KEY_RIGHT 17
+#define DIRECT_KEY_A 1
+#define DIRECT_KEY_B 0
+#define DIRECT_KEY_SELECT 9
+#define DIRECT_KEY_START 10
+
+#define NAME_LENGTH 128
+
+#include <future>
+
 //you should only ever instantiate one of these, by the way
 class InputManager
 {
@@ -51,6 +66,19 @@ private:
 	MenuScreen * menu_layer_ = nullptr;
 
   int convertFromEmustationFile( const std::string & fname );
+
+	// direct mode
+	int device_id_; 
+	unsigned char axes_;
+	unsigned char buttons_;
+	int *axis_;
+	char *button_;	
+	char *prestat_;
+	char device_name_[NAME_LENGTH];
+	std::thread th_;
+	int trunning_;
+	int select_press_ = 0;
+
 
 public:
 	virtual ~InputManager();
