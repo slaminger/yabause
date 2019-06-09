@@ -30,6 +30,9 @@ using namespace::std;
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+
 #define PADLOG 
 //#define PADLOG printf
 
@@ -58,8 +61,6 @@ static const unsigned int SDL_HAT_VALUES_NUM = sizeof(SDL_HAT_VALUES) / sizeof(S
 //    This is actually just an SDL_JoystickID (also called instance ID), but -1 means "keyboard" instead of "error."
 // 4. Joystick GUID - this is some squashed version of joystick vendor, version, and a bunch of other device-specific things.
 //    It should remain the same across runs of the program/system restarts/device reordering and is what I use to identify which joystick to load.
-
-namespace fs = boost::filesystem;
 
 InputManager* InputManager::mInstance = NULL;
 void genJoyString( string & out, SDL_JoystickID id, const string & name, const string & guid );
@@ -1309,15 +1310,15 @@ bool InputManager::loadInputConfig(InputConfig* config)
   config->mapInput("b", Input(0, TYPE_BUTTON, 1, 1, true));
   config->mapInput("start", Input(0, TYPE_BUTTON, 10, 1, true));
   config->mapInput("select", Input(0, TYPE_BUTTON, 9, 1, true));
-/*
+
   std::string keymap_fname = getenv("HOME");
   keymap_fname += "/.yabasanshiro/keymapv2.json";
   std::string src_keymap_fname = "/usr/share/yabasanshiro/keymapv2_switch.json";
 
-  if(!fs::exists(keymap_fname)){
+  if(!fs::exists(keymap_fname) && fs::exists(src_keymap_fname) ){
       fs::copy(src_keymap_fname, keymap_fname);
   }
-*/  
+  
   return true;
 #endif  
   std::string path = getConfigPath();
