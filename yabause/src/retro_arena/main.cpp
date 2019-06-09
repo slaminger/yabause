@@ -32,8 +32,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 #include <SDL2/SDL.h>
 #define GL_GLEXT_PROTOTYPES 1
-#include <SDL2/SDL_opengles2.h>
-
+//#include <SDL2/SDL_opengles2.h>
+#include <SDL2/SDL_opengl.h>
 
 extern "C" {
 #include "../config.h"

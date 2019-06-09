@@ -79,9 +79,6 @@ void genJoyString( string & out, SDL_JoystickID id, const string & name, const s
 
 #include <linux/input.h>
 #include <linux/joystick.h>
-#include "axbtnmap.h"
-
-
 
 InputManager::InputManager() : mKeyboardInputConfig(NULL)
 {
@@ -89,9 +86,6 @@ InputManager::InputManager() : mKeyboardInputConfig(NULL)
   device_id_ = open("/dev/input/js0", O_RDONLY);
 
 	int version = 0x000800;
-
-	uint16_t btnmap[BTNMAP_SIZE];
-	uint8_t axmap[AXMAP_SIZE];
 
 	ioctl(device_id_, JSIOCGVERSION, &version);
 	ioctl(device_id_, JSIOCGAXES, &axes_);
