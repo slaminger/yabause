@@ -1307,7 +1307,7 @@ bool InputManager::loadInputConfig(InputConfig* config)
 
   std::string keymap_fname = getenv("HOME");
   keymap_fname += "/.yabasanshiro/keymapv2.json";
-  std::string src_keymap_fname = "/usr/share/yabasanshiro/keymapv2_switch.json";
+  std::string src_keymap_fname = "/usr/share/yabasanshiro/keymapv2.json";
 
   if(!fs::exists(keymap_fname) && fs::exists(src_keymap_fname) ){
       fs::copy(src_keymap_fname, keymap_fname);
