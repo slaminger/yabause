@@ -223,6 +223,8 @@ int yabauseinit()
   yinit.video_filter_type = 0;
 #if defined(__SWITCH__)  
   yinit.polygon_generation_mode = GPU_TESSERATION;
+  yinit.rbg_use_compute_shader = 1;
+  yinit.rbg_resolution_mode = RBG_RES_FIT_TO_EMULATION;
 #else
   yinit.polygon_generation_mode = PERSPECTIVE_CORRECTION;
 #endif  
