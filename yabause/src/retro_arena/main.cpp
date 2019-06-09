@@ -32,8 +32,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 #include <SDL2/SDL.h>
 #define GL_GLEXT_PROTOTYPES 1
-#include <SDL2/SDL_opengles2.h>
-
+//#include <SDL2/SDL_opengles2.h>
+#include <SDL2/SDL_opengl.h>
 
 extern "C" {
 #include "../config.h"
@@ -54,7 +54,7 @@ extern "C" {
 #include "sndsdl.h"
 #include "osdcore.h"
 #include "ygl.h"
-#include "libpng12/png.h"
+#include "libpng16/png.h"
 }
 
 #include "InputManager.h"
@@ -62,7 +62,7 @@ extern "C" {
 
 extern "C" {
 static char biospath[256] = "/home/pigaming/RetroPie/BIOS/saturn/bios.bin";
-static char cdpath[256] = ""; ///home/pigaming/RetroPie/roms/saturn/nights.cue";
+static char cdpath[256] = "/storage/roms/a";
 //static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/gd.cue";
 //static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/Virtua Fighter Kids (1996)(Sega)(JP).ccd";
 static char buppath[256] = "./back.bin";
@@ -233,7 +233,7 @@ int yabauseinit()
   yinit.rotate_screen = 0;
   yinit.scsp_sync_count_per_frame = g_scsp_sync;
   yinit.extend_backup = 1;
-  yinit.scsp_main_mode = 1;
+  yinit.scsp_main_mode = 0;
 
   res = YabauseInit(&yinit);
   if( res == -1) {

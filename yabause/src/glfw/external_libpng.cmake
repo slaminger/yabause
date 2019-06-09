@@ -24,10 +24,10 @@ set(png_INCLUDE_DIR ${png_INSTALL}/include)
 
 if(WIN32)
   set(png_STATIC_LIBRARIES 
-    debug ${CMAKE_CURRENT_BINARY_DIR}/png/install/lib/libpng12_staticd.lib
-    optimized ${CMAKE_CURRENT_BINARY_DIR}/png/install/lib/libpng12_static.lib)
+    debug ${CMAKE_CURRENT_BINARY_DIR}/png/install/lib/libpng16_staticd.lib
+    optimized ${CMAKE_CURRENT_BINARY_DIR}/png/install/lib/libpng16_static.lib)
 else()
-  set(png_STATIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/png/install/lib/libpng12.a)
+  set(png_STATIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/png/install/lib/libpng16.a)
 endif()
 
 set(png_HEADERS
@@ -38,10 +38,14 @@ ExternalProject_Add(
     png
     PREFIX png
     DEPENDS zlib
-    URL ${png_URL}
-    URL_HASH ${png_HASH}
+    #URL ${png_URL}
+    #URL_HASH ${png_HASH}
+    GIT_REPOSITORY    git://git.code.sf.net/p/libpng/code
+    GIT_TAG           v1.6.9
     INSTALL_DIR ${png_INSTALL}
     DOWNLOAD_DIR "${DOWNLOAD_LOCATION}"
+    CMAKE_ARGS
+      -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
     CMAKE_CACHE_ARGS
     	-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
         -DCMAKE_BUILD_TYPE:STRING=Release
