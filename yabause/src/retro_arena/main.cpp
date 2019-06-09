@@ -62,7 +62,7 @@ extern "C" {
 
 extern "C" {
 static char biospath[256] = "/home/pigaming/RetroPie/BIOS/saturn/bios.bin";
-static char cdpath[256] = ""; ///home/pigaming/RetroPie/roms/saturn/nights.cue";
+static char cdpath[256] = "/storage/roms/";
 //static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/gd.cue";
 //static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/Virtua Fighter Kids (1996)(Sega)(JP).ccd";
 static char buppath[256] = "./back.bin";
