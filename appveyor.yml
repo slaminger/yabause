@@ -69,7 +69,8 @@ after_build:
   #- appveyor PushArtifact %yab_name%.zip
 
 artifacts:
-  - path: 'C:\projects\yabause\win_template\*"
+  - path: 'C:\projects\yabause\win_template\*'
+    name: yabasanshiro_win32
 
 deploy:
   release: YabaSanshiro-v$(appveyor_build_version)
