@@ -55,10 +55,8 @@ before_build:
   - cd build
   - cmake -G "%generator%" %cmake_args% ..
 
-build_script: >
-  - msbuild YabaSanshiro.sln 
-    /p:configuration=Release 
-    /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+build_script:
+  - msbuild YabaSanshiro.sln /p:configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 # make a distributable package of the build output
 after_build:
