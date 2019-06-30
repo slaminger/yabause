@@ -8,7 +8,8 @@ environment:
   matrix:
     # Visual Studio build
     - generator: "Visual Studio 14 2015"
-      CMAKE_PREFIX_PATH: C:\Qt\5.9.7\msvc2015
+      QT_PATH: "C:\Qt\5.9.7\msvc2015"
+      CMAKE_PREFIX_PATH: "%QT_PATH%"
       compiler_type: "vs14-x32"
       sdl_filename: SDL2-devel-2.0.3-VC.zip
       sdl_arch: x86
@@ -64,10 +65,19 @@ after_build:
   #- ps: $git_hash_date += "-"
   #- ps: $git_hash_date += ${env:APPVEYOR_REPO_COMMIT_TIMESTAMP}.substring(0,10)
   #- ps: ${env:yab_name} = "yabasanhiro-${git_hash_date}-${env:compiler_type}"
-  - ps: cd C:\projects\yabause\yabause\build
-  - ps: Copy-Item src/qt/Release/yabasanshiro.exe ../../win_template/
-  - ps: cd ../../
-  #- rename win_template yab_name
+  - ps: Copy-Item ${env:QT_PATH}\lib\Qt5Core.dll C:\projects\yabause\win_template\
+  - ps: Copy-Item ${env:QT_PATH}\lib\Qt5Gui.dll C:\projects\yabause\win_template\
+  - ps: Copy-Item ${env:QT_PATH}\lib\Qt5Multimedia.dll C:\projects\yabause\win_template\
+  - ps: Copy-Item ${env:QT_PATH}\lib\Qt5Network.dll C:\projects\yabause\win_template\
+  - ps: Copy-Item ${env:QT_PATH}\lib\Qt5OpenGL.dll C:\projects\yabause\win_template\
+  - ps: Copy-Item ${env:QT_PATH}\lib\Qt5Widgets.dll C:\projects\yabause\win_template\
+  - ps: Copy-Item C:\projects\yabause\yabause\build\src\qt\Release\yabasanshiro.exe C:\projects\yabause\win_template\
+  - ps: $git_hash_date = ${env:APPVEYOR_REPO_COMMIT}.substring(0, 7)
+  - ps: $git_hash_date += "-"
+  - ps: $git_hash_date += ${env:APPVEYOR_REPO_COMMIT_TIMESTAMP}.substring(0,10)
+  - ps: ${env:yab_name} = "yabasanshiro-${git_hash_date}-${env:compiler_type}"
+  - ps: Compress-Archive C:\projects\yabause\win_template\* ${env:yab_name}.zip -Force
+  - appveyor PushArtifact %yab_name%.zip
 
   # zip all output files and push the artifact, name it with the commit, date and compiler type
   #- ps: $git_hash_date = ${env:APPVEYOR_REPO_COMMIT}.substring(0, 7)
@@ -77,9 +87,9 @@ after_build:
   #- cmd: cpack -G ZIP -D CPACK_PACKAGE_FILE_NAME=%yab_name%
   #- appveyor PushArtifact %yab_name%.zip
 
-artifacts:
-  - path: 'C:\projects\yabause\win_template\*'
-    name: yabasanshiro_win32
+#artifacts:
+#  - path: 'C:\projects\yabause\win_template\*'
+#    name: yabasanshiro_win32
 
 deploy:
   release: YabaSanshiro-v$(appveyor_build_version)
