@@ -8,7 +8,7 @@ environment:
   matrix:
     # Visual Studio build
     - generator: "Visual Studio 14 2015"
-      CMAKE_PREFIX_PATH: C:\Qt\5.11.3\msvc2015
+      CMAKE_PREFIX_PATH: C:\Qt\5.9.7\msvc2015
       compiler_type: "vs14-x32"
       sdl_filename: SDL2-devel-2.0.3-VC.zip
       sdl_arch: x86
