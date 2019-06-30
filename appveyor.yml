@@ -80,7 +80,7 @@ after_build:
   - ps: Copy-Item ${env:QT_PATH}\bin\Qt5OpenGL.dll ${env:APPVEYOR_BUILD_FOLDER}\win_template\
   - ps: Copy-Item ${env:QT_PATH}\bin\Qt5Widgets.dll ${env:APPVEYOR_BUILD_FOLDER}\win_template\
   - ps: Copy-Item ${env:QT_PATH}\plugins\platforms\* ${env:APPVEYOR_BUILD_FOLDER}\win_template\platforms\
-    - ps: Copy-Item ${env:APPVEYOR_BUILD_FOLDER}\mini18n\build\src\Release\mini18n.dll ${env:APPVEYOR_BUILD_FOLDER}\win_template\
+  - ps: Copy-Item ${env:APPVEYOR_BUILD_FOLDER}\mini18n\build\src\Release\mini18n.dll ${env:APPVEYOR_BUILD_FOLDER}\win_template\
   - ps: Copy-Item ${env:APPVEYOR_BUILD_FOLDER}\yabause\l10n\* ${env:APPVEYOR_BUILD_FOLDER}\win_template\trans\
   - ps: Copy-Item ${env:APPVEYOR_BUILD_FOLDER}\yabause\build\src\qt\Release\yabasanshiro.exe ${env:APPVEYOR_BUILD_FOLDER}\win_template\
   - ps: $git_hash_date = ${env:APPVEYOR_REPO_COMMIT}.substring(0, 7)
