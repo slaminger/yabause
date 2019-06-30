@@ -56,7 +56,7 @@ after_build:
   #- ps: $git_hash_date += ${env:APPVEYOR_REPO_COMMIT_TIMESTAMP}.substring(0,10)
   #- ps: ${env:yab_name} = "yabasanhiro-${git_hash_date}-${env:compiler_type}"
   - cd C:\projects\yabause\yabause\build
-  - copy src/qt/Release/yabasanshiro.exe ../../win_template/
+  - Copy-Item src/qt/Release/yabasanshiro.exe ../../win_template/
   - cd ../../
   #- rename win_template yab_name
 
