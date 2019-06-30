@@ -55,9 +55,9 @@ after_build:
   #- ps: $git_hash_date += "-"
   #- ps: $git_hash_date += ${env:APPVEYOR_REPO_COMMIT_TIMESTAMP}.substring(0,10)
   #- ps: ${env:yab_name} = "yabasanhiro-${git_hash_date}-${env:compiler_type}"
-  - cd C:\projects\yabause\yabause\build
-  - Copy-Item src/qt/Release/yabasanshiro.exe ../../win_template/
-  - cd ../../
+  - ps: cd C:\projects\yabause\yabause\build
+  - ps: Copy-Item src/qt/Release/yabasanshiro.exe ../../win_template/
+  - ps: cd ../../
   #- rename win_template yab_name
 
   # zip all output files and push the artifact, name it with the commit, date and compiler type
