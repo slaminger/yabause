@@ -73,19 +73,21 @@ after_build:
   #- ps: $git_hash_date += "-"
   #- ps: $git_hash_date += ${env:APPVEYOR_REPO_COMMIT_TIMESTAMP}.substring(0,10)
   #- ps: ${env:yab_name} = "yabasanhiro-${git_hash_date}-${env:compiler_type}"
-  - ps: Copy-Item ${env:QT_PATH}\bin\Qt5Core.dll C:\projects\yabause\win_template\
-  - ps: Copy-Item ${env:QT_PATH}\bin\Qt5Gui.dll C:\projects\yabause\win_template\
-  - ps: Copy-Item ${env:QT_PATH}\bin\Qt5Multimedia.dll C:\projects\yabause\win_template\
-  - ps: Copy-Item ${env:QT_PATH}\bin\Qt5Network.dll C:\projects\yabause\win_template\
-  - ps: Copy-Item ${env:QT_PATH}\bin\Qt5OpenGL.dll C:\projects\yabause\win_template\
-  - ps: Copy-Item ${env:QT_PATH}\bin\Qt5Widgets.dll C:\projects\yabause\win_template\
-  - ps: Copy-Item C:\projects\yabause\mini18n\build\src\Release\mini18n.dll C:\projects\yabause\win_template\
-  - ps: Copy-Item C:\projects\yabause\yabause\build\src\qt\Release\yabasanshiro.exe C:\projects\yabause\win_template\
+  - ps: Copy-Item ${env:QT_PATH}\bin\Qt5Core.dll ${env:APPVEYOR_BUILD_FOLDER}\win_template\
+  - ps: Copy-Item ${env:QT_PATH}\bin\Qt5Gui.dll ${env:APPVEYOR_BUILD_FOLDER}\win_template\
+  - ps: Copy-Item ${env:QT_PATH}\bin\Qt5Multimedia.dll ${env:APPVEYOR_BUILD_FOLDER}\win_template\
+  - ps: Copy-Item ${env:QT_PATH}\bin\Qt5Network.dll ${env:APPVEYOR_BUILD_FOLDER}\win_template\
+  - ps: Copy-Item ${env:QT_PATH}\bin\Qt5OpenGL.dll ${env:APPVEYOR_BUILD_FOLDER}\win_template\
+  - ps: Copy-Item ${env:QT_PATH}\bin\Qt5Widgets.dll ${env:APPVEYOR_BUILD_FOLDER}\win_template\
+  - ps: Copy-Item ${env:QT_PATH}\plugins\platforms\* ${env:APPVEYOR_BUILD_FOLDER}\win_template\platforms\
+    - ps: Copy-Item ${env:APPVEYOR_BUILD_FOLDER}\mini18n\build\src\Release\mini18n.dll ${env:APPVEYOR_BUILD_FOLDER}\win_template\
+  - ps: Copy-Item ${env:APPVEYOR_BUILD_FOLDER}\yabause\l10n\* ${env:APPVEYOR_BUILD_FOLDER}\win_template\trans\
+  - ps: Copy-Item ${env:APPVEYOR_BUILD_FOLDER}\yabause\build\src\qt\Release\yabasanshiro.exe ${env:APPVEYOR_BUILD_FOLDER}\win_template\
   - ps: $git_hash_date = ${env:APPVEYOR_REPO_COMMIT}.substring(0, 7)
   - ps: $git_hash_date += "-"
   - ps: $git_hash_date += ${env:APPVEYOR_REPO_COMMIT_TIMESTAMP}.substring(0,10)
   - ps: ${env:yab_name} = "yabasanshiro-${git_hash_date}-${env:compiler_type}"
-  - ps: Compress-Archive C:\projects\yabause\win_template\* ./${env:yab_name}.zip -Force
+  - ps: Compress-Archive ${env:APPVEYOR_BUILD_FOLDER}\win_template\* ./${env:yab_name}.zip -Force
   - appveyor PushArtifact %yab_name%.zip
 
   # zip all output files and push the artifact, name it with the commit, date and compiler type
