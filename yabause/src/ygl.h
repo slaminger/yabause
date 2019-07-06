@@ -186,6 +186,7 @@ extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
         #define GL_GLEXT_PROTOTYPES 1
         #define GLX_GLXEXT_PROTOTYPES 1
         #include <GL/gl.h>
+        #include <GL/glext.h>
     #elif defined(_OGLES3_)
         #define GL_GLEXT_PROTOTYPES 1
         #define GLX_GLXEXT_PROTOTYPES 1

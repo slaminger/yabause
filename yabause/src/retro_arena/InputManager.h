@@ -18,6 +18,8 @@ struct MenuInput {
 	SDL_JoystickID select_device_ = -1;
 };
 
+typedef std::map<std::string, int *> pre_input_map;
+
 // For SWITCH joy con
 #define SWITCH_BROKEN_AIX 2
 #define SWITCH_INVERSE_AIX 1
@@ -67,6 +69,7 @@ private:
 
   int convertFromEmustationFile( const std::string & fname );
 
+  pre_input_map joymap_;
 	// direct mode
 	int device_id_; 
 	unsigned char axes_;
