@@ -462,6 +462,7 @@ int main(int argc, char** argv)
     event_count = 0;
     while(SDL_PollEvent(&e)) {
       event_count++;
+      //printf("event_count %d\n",event_count);
       if(e.type == SDL_QUIT){
         glClearColor(0.0,0.0,0.0,1.0);
         glClear(GL_COLOR_BUFFER_BIT);        
@@ -600,7 +601,7 @@ int main(int argc, char** argv)
         menu->onEvent( e );
       }
     }
-    inputmng->handleJoyEvents();
+    event_count += inputmng->handleJoyEvents();
 
     if( menu_show ){
 
@@ -609,8 +610,9 @@ int main(int argc, char** argv)
         glClear(GL_COLOR_BUFFER_BIT);
         menu->drawAll();
         SDL_GL_SwapWindow(wnd);
+        //printf("Menu: SDL_GL_SwapWindow %d\n", event_count);
       }else{
-        usleep( 16*1000 );
+        usleep( 16666 );
       }
     }else{
       //printf("\033[%d;%dH Frmae = %d \n", 0, 0, frame_cont);

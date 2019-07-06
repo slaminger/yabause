@@ -805,6 +805,7 @@ int InputManager::handleJoyEventsMenu(void) {
    
     int joyId = 0;
     int i = 0;
+    int event = 0;
 
     for (i = 0; i < axes_; i++){
           //printf("%2d:%6d ", i, axis_[i]);
@@ -823,27 +824,35 @@ int InputManager::handleJoyEventsMenu(void) {
                 switch(i){
                 case DIRECT_KEY_UP:
                   menu_layer_->keyboardEvent("up",0,1,0);
+                  event++;
                   break;
                 case DIRECT_KEY_DOWN:
                   menu_layer_->keyboardEvent("down",0,1,0);
+                  event++;
                   break;
                 case DIRECT_KEY_LEFT:
                   menu_layer_->keyboardEvent("left",0,1,0);
+                  event++;
                   break;
                 case DIRECT_KEY_RIGHT:
                   menu_layer_->keyboardEvent("right",0,1,0);
+                  event++;
                   break;
                 case DIRECT_KEY_A:
                   menu_layer_->keyboardEvent("a",0,1,0);
+                  event++;
                   break;
                 case DIRECT_KEY_B:
                   menu_layer_->keyboardEvent("b",0,1,0);
+                  event++;
                   break;
                 case DIRECT_KEY_SELECT:
                   menu_layer_->keyboardEvent("select",0,1,0);
+                  event++;
                   break;
                 case DIRECT_KEY_START:
                   menu_layer_->keyboardEvent("start",0,1,0);
+                  event++;
                   break;
                 }
             } 
@@ -865,21 +874,27 @@ int InputManager::handleJoyEventsMenu(void) {
                 switch(i){
                 case DIRECT_KEY_UP:
                   menu_layer_->keyboardEvent("up",0,0,0);
+                  event++;
                   break;
                 case DIRECT_KEY_DOWN:
                   menu_layer_->keyboardEvent("down",0,0,0);
+                  event++;
                   break;
                 case DIRECT_KEY_LEFT:
                   menu_layer_->keyboardEvent("left",0,0,0);
+                  event++;
                   break;
                 case DIRECT_KEY_RIGHT:
                   menu_layer_->keyboardEvent("right",0,0,0);
+                  event++;
                   break;
                 case DIRECT_KEY_A:
                   menu_layer_->keyboardEvent("a",0,0,0);
+                  event++;
                   break;
                 case DIRECT_KEY_B:
                   menu_layer_->keyboardEvent("b",0,0,0);
+                  event++;
                   if( menu_layer_->onBackButtonPressed() == 0 ){
                     SDL_Event event = {};
                     event.type = showmenu_;
@@ -891,6 +906,7 @@ int InputManager::handleJoyEventsMenu(void) {
                   break;
                 case DIRECT_KEY_SELECT:
                   menu_layer_->keyboardEvent("select",0,0,0);
+                  event++;
                   if( menu_layer_->onBackButtonPressed() == 0 ){
                     SDL_Event event = {};
                     event.type = showmenu_;
@@ -902,12 +918,13 @@ int InputManager::handleJoyEventsMenu(void) {
                   break;
                 case DIRECT_KEY_START:
                   menu_layer_->keyboardEvent("start",0,0,0);
+                  event++;
                   break;
                 }
             } 
           }
     }
-    return 0;
+    return event;
   }
 #endif
   
