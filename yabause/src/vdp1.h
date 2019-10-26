@@ -64,7 +64,7 @@ typedef struct
    const char *Name;
    int (*Init)(void);
    void (*DeInit)(void);
-   void (*Resize)(int,int,unsigned int, unsigned int, int);
+   void (*Resize)(int,int,unsigned int, unsigned int, int, int);
    int (*IsFullscreen)(void);
    // VDP1 specific
    int (*Vdp1Reset)(void);
@@ -118,6 +118,11 @@ void Vdp1FakeDrawCommands(u8 * ram, Vdp1 * regs);
 
 extern Vdp1 * Vdp1Regs;
 
+enum VDP1STATUS {
+  VDP1_STATUS_IDLE = 0,
+  VDP1_STATUS_RUNNING
+};
+
 // struct for Vdp1 part that shouldn't be saved
 typedef struct {
    int disptoggle;
@@ -127,6 +132,7 @@ typedef struct {
    int frame_change_plot;
    int swap_frame_buffer;
    int current_frame;
+   int status;
 } Vdp1External_struct;
 
 extern Vdp1External_struct Vdp1External;

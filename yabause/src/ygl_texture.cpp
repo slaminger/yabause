@@ -33,13 +33,13 @@ extern Vdp2 * fixVdp2Regs;
 const char prg_generate_rbg[] =
 //#if defined(_OGLES3_)
 "#version 310 es \n"
+"precision highp float; \n"
+"precision highp int;\n"
+"precision highp image2D;\n"
 //#else
 //"#version 430 \n"
 //#endif
 "#pragma optionNV(inline all)\n"
-"precision highp float; \n"
-"precision highp int;\n"
-"precision highp image2D;\n"
 "layout(local_size_x = 4, local_size_y = 4) in;\n"
 "layout(rgba8, binding = 0) writeonly highp uniform image2D outSurface;\n"
 "layout(std430, binding = 1) readonly buffer VDP2 { uint vram[]; };\n"
@@ -127,6 +127,9 @@ const char prg_generate_rbg[] =
 "  int window_area_mode;"
 "  float alpha_;"
 "  int cram_shift;"
+"  int hires_shift;"
+"  int specialprimode;"
+"  uint priority;"
 "};\n"
 " struct vdp2WindowInfo\n"
 "{\n"
@@ -148,7 +151,7 @@ const char prg_generate_rbg[] =
 "      if( (addr & 0x02u) != 0u ) { kdata >>= 16; } \n"
 "      kdata = (((kdata) >> 8 & 0xFFu) | ((kdata) & 0xFFu) << 8);\n"
 "    }else{\n"
-"      kdata = cram[ ((0x800u + (addr&0xFFFu))>>2)  ]; \n"
+"      kdata = cram[ ((0x800u + (addr&0x7FFu))>>2)  ]; \n"
 "      if( (addr & 0x02u) != 0u ) { kdata >>= 16; } \n"
 "    }\n"
 "    if ( (kdata & 0x8000u) != 0u) { return -1; }\n"
@@ -159,7 +162,7 @@ const char prg_generate_rbg[] =
 "	     kdata = vram[ addr>>2 ]; \n"
 "      kdata = ((kdata&0xFF000000u) >> 24 | ((kdata) >> 8 & 0xFF00u) | ((kdata) & 0xFF00u) << 8 | (kdata&0x000000FFu) << 24);\n"
 "    }else{\n"
-"      kdata = cram[ ((0x800u + (addr&0xFFFu) )>>2) ]; \n"
+"      kdata = cram[ ((0x800u + (addr&0x7FFu) )>>2) ]; \n"
 "      kdata = ((kdata&0xFFFF0000u)>>16|(kdata&0x0000FFFFu)<<16);\n"
 "    }\n"
 "	 if( para[paramid].linecoefenab != 0) lineaddr = (kdata >> 24) & 0x7Fu; else lineaddr = 0u;\n"
@@ -170,6 +173,7 @@ const char prg_generate_rbg[] =
 " }\n"
 
 " bool isWindowInside(int posx, int posy) {\n"
+" posy <<= hires_shift;"
 "	if (window_area_mode == 0) {\n"
 "		if (pWinInfo[posy].WinShowLine == 0) {\n"
 "			return true;\n"
@@ -208,6 +212,20 @@ const char prg_generate_rbg[] =
 "}\n"
 
 
+"int PixelIsSpecialPriority( uint specialcode, uint dot ) { \n"
+"  dot &= 0xfu; \n"
+"  if ( (specialcode & 0x01u) != 0u && (dot == 0u || dot == 1u) ){ return 1;} \n"
+"  if ( (specialcode & 0x02u) != 0u && (dot == 2u || dot == 3u) ){ return 1;} \n"
+"  if ( (specialcode & 0x04u) != 0u && (dot == 4u || dot == 5u) ){ return 1;} \n"
+"  if ( (specialcode & 0x08u) != 0u && (dot == 6u || dot == 7u) ){ return 1;} \n"
+"  if ( (specialcode & 0x10u) != 0u && (dot == 8u || dot == 9u) ){ return 1;} \n"
+"  if ( (specialcode & 0x20u) != 0u && (dot == 0xau || dot == 0xbu) ){ return 1;} \n"
+"  if ( (specialcode & 0x40u) != 0u && (dot == 0xcu || dot == 0xdu) ){ return 1;} \n"
+"  if ( (specialcode & 0x80u) != 0u && (dot == 0xeu || dot == 0xfu) ){ return 1;} \n"
+"  return 0; \n"
+"} \n"
+
+
 //----------------------------------------------------------------------
 // Main
 //----------------------------------------------------------------------
@@ -221,11 +239,15 @@ const char prg_generate_rbg[] =
 "  float ky; \n"
 "  uint kdata;\n"
 "  uint patternname = 0xFFFFFFFFu;\n"
+"  uint specialfunction_in = 0u;\n"
+"  uint specialcolorfunction_in = 0u;\n"
 "  ivec2 texel = ivec2(gl_GlobalInvocationID.xy);\n"
 "  ivec2 size = imageSize(outSurface);\n"
 "  if (texel.x >= size.x || texel.y >= size.y ) return;\n"
 "  float posx = float(texel.x) * hres_scale;\n"
-"  float posy = float(texel.y) * vres_scale;\n";
+"  float posy = float(texel.y) * vres_scale;\n"
+"  specialfunction_in = (supplementdata >> 9) & 0x1u; \n"
+"  specialcolorfunction_in = (supplementdata >> 8) & 0x1u; \n";
 
 const char prg_rbg_rpmd0_2w[] =
 "  paramid = 0; \n"
@@ -261,7 +283,7 @@ const char prg_rbg_rpmd2_2w[] =
 
 
 const char prg_get_param_mode03[] =
-"  if( isWindowInside( int(posx), int(posy) ) ) { "
+"  if( isWindowInside( int(posx), int(posy)) ) { "
 "    paramid = 0; \n"
 "    if( para[paramid].coefenab != 0 ){ \n"
 "      if( GetKValue(paramid,posx,posy,ky,lineaddr ) == -1 ) { \n"
@@ -423,8 +445,8 @@ const char prg_rbg_get_pattern_data_2w[] =
 "  tmp1 = (((tmp1 >> 8) & 0xFFu) | ((tmp1) & 0xFFu) << 8);\n"
 "  uint flipfunction = (tmp1 & 0xC000u) >> 14;\n"
 "  if(colornumber==0) paladdr = tmp1 & 0x7Fu; else paladdr = tmp1 & 0x70u;\n" // not in 16 colors
-"  uint specialfunction_in = (tmp1 & 0x2000u) >> 13;\n"
-"  uint specialcolorfunction_in = (tmp1 & 0x1000u) >> 12;\n"
+"  specialfunction_in = (tmp1 & 0x2000u) >> 13;\n"
+"  specialcolorfunction_in = (tmp1 & 0x1000u) >> 12;\n"
 "  charaddr &= 0x3FFFu;\n"
 "  charaddr *= 0x20u;\n";
 
@@ -483,6 +505,15 @@ const char prg_rbg_getcolor_4bpp[] =
 "    alpha = 0.0;\n"
 "  } else {\n"
 "    cramindex = (coloroffset + ((paladdr << 4) | (dot & 0xFu)));\n"
+"    if (specialprimode == 2) { \n"
+"      uint spriority = priority & 0xEu; \n"
+"      if ( (specialfunction_in & 0x01u) != 0u ) { \n"
+"        if( PixelIsSpecialPriority(specialcode, dot ) == 1 ){ \n"
+"          spriority |= 0x1u; \n"
+"        }\n"
+"      }\n"
+"      cramindex |= spriority << 16; \n"
+"    }\n"
 "    switch (specialcolormode)\n"
 "    {\n"
 "    case 1:\n"
@@ -515,6 +546,15 @@ const char prg_rbg_getcolor_8bpp[] =
 "    alpha = 0.0;\n"
 "  } else {\n"
 "    cramindex = (coloroffset + ((paladdr << 4) | dot));\n"
+"    if (specialprimode == 2) { \n"
+"      uint spriority = priority & 0xEu; \n"
+"      if ( (specialfunction_in & 0x01u) != 0u) { \n"
+"        if( PixelIsSpecialPriority(specialcode, dot ) == 1 ){ \n"
+"          spriority |= 0x1u; \n"
+"        }\n"
+"      }\n"
+"      cramindex |= spriority << 16; \n"
+"    }\n"
 "    switch (specialcolormode)\n"
 "    {\n"
 "    case 1:\n"
@@ -656,7 +696,7 @@ const GLchar * a_prg_rbg_1_2w_bitmap[] = {
 
 const GLchar * a_prg_rbg_1_2w_p1_4bpp[] = {
 	prg_generate_rbg,
-	prg_rbg_rpmd0_2w,
+	prg_rbg_rpmd1_2w,
 	prg_rbg_xy,
 	prg_rbg_overmode_repeat,
 	prg_rbg_get_patternaddr,
@@ -667,7 +707,7 @@ const GLchar * a_prg_rbg_1_2w_p1_4bpp[] = {
 
 const GLchar * a_prg_rbg_1_2w_p2_4bpp[] = {
 	prg_generate_rbg,
-	prg_rbg_rpmd0_2w,
+	prg_rbg_rpmd1_2w,
 	prg_rbg_xy,
 	prg_rbg_overmode_repeat,
 	prg_rbg_get_patternaddr,
@@ -678,7 +718,7 @@ const GLchar * a_prg_rbg_1_2w_p2_4bpp[] = {
 
 const GLchar * a_prg_rbg_1_2w_p1_8bpp[] = {
 	prg_generate_rbg,
-	prg_rbg_rpmd0_2w,
+	prg_rbg_rpmd1_2w,
 	prg_rbg_xy,
 	prg_rbg_overmode_repeat,
 	prg_rbg_get_patternaddr,
@@ -689,7 +729,7 @@ const GLchar * a_prg_rbg_1_2w_p1_8bpp[] = {
 
 const GLchar * a_prg_rbg_1_2w_p2_8bpp[] = {
 	prg_generate_rbg,
-	prg_rbg_rpmd0_2w,
+	prg_rbg_rpmd1_2w,
 	prg_rbg_xy,
 	prg_rbg_overmode_repeat,
 	prg_rbg_get_patternaddr,
@@ -825,9 +865,12 @@ struct RBGUniform {
     specialcolormode = 0;
     specialcolorfunction=0;
     specialcode=0;
-	window_area_mode = 0;
-	alpha_ = 0.0;
-	cram_shift = 1;
+	  window_area_mode = 0;
+	  alpha_ = 0.0;
+	  cram_shift = 1;
+    hires_shift = 0;
+    specialprimode = 0;
+    priority = 0;
   }
   float hres_scale;
   float vres_scale;
@@ -851,6 +894,9 @@ struct RBGUniform {
   int window_area_mode;
   float alpha_;
   int cram_shift;
+  int hires_shift;
+  int specialprimode;
+  unsigned int priority;
 };
 
 class RBGGenerator{
@@ -1132,7 +1178,7 @@ public:
 
   glGenBuffers(1, &scene_uniform);
   glBindBuffer(GL_UNIFORM_BUFFER, scene_uniform);
-  glBufferData(GL_UNIFORM_BUFFER, sizeof(RBGDrawInfo), &uniform, GL_STATIC_DRAW);
+  glBufferData(GL_UNIFORM_BUFFER, sizeof(RBGUniform), &uniform, GL_STATIC_DRAW);
   glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	glGenBuffers(1, &ssbo_window_);
@@ -1646,7 +1692,7 @@ public:
 				}
 			}
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_window_);
-			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(vdp2WindowInfo)*int(rbg->vres / rbg->rotate_mval_v), (void*)rbg->info.pWinInfo);
+			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(vdp2WindowInfo)*(int(rbg->vres / rbg->rotate_mval_v)<<rbg->info.hres_shift) , (void*)rbg->info.pWinInfo);
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo_window_);
 		}
 
@@ -1654,7 +1700,7 @@ public:
 
 	// no line color insersion
 	else {
-		if (fixVdp2Regs->RPMD == 0 || (fixVdp2Regs->RPMD == 3 && (fixVdp2Regs->WCTLD & 0xA) == 0) ) {
+		if ( rbg->rgb_type == 0 && (fixVdp2Regs->RPMD == 0 || (fixVdp2Regs->RPMD == 3 && (fixVdp2Regs->WCTLD & 0xA) == 0)) ) {
 			if (rbg->info.isbitmap) {
 				switch (rbg->info.colornumber) {
 				case 0: {
@@ -1790,7 +1836,7 @@ public:
 				}
 			}
 		}
-		else if (fixVdp2Regs->RPMD == 1) {
+		else if ( (fixVdp2Regs->RPMD == 1 && rbg->rgb_type == 0)  || rbg->rgb_type == 0x04 ) {
 			if (rbg->info.isbitmap) {
 				switch (rbg->info.colornumber) {
 				case 0: {
@@ -2201,7 +2247,7 @@ public:
 				}
 			}
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_window_);
-			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(vdp2WindowInfo)*int(rbg->vres / rbg->rotate_mval_v), (void*)rbg->info.pWinInfo);
+			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(vdp2WindowInfo)*(int(rbg->vres / rbg->rotate_mval_v)<<rbg->info.hres_shift) , (void*)rbg->info.pWinInfo);
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo_window_);
 		}
 	}
@@ -2256,21 +2302,26 @@ public:
 	uniform.colornumber = rbg->info.colornumber;
 	uniform.window_area_mode = rbg->info.WindwAreaMode;
 	uniform.alpha_ = (float)rbg->info.alpha / 255.0f;
+  uniform.specialprimode = rbg->info.specialprimode;
+  uniform.priority = rbg->info.priority;
+
 	if (Vdp2Internal.ColorMode < 2) {
 		uniform.cram_shift = 1;
 	}
 	else {
 		uniform.cram_shift = 2;
 	}
+  uniform.hires_shift = rbg->info.hres_shift;
 
   glBindBuffer(GL_UNIFORM_BUFFER, scene_uniform);
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(RBGDrawInfo), (void*)&uniform);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(RBGUniform), (void*)&uniform);
 	ErrorHandle("glBufferSubData");
   glBindBufferBase(GL_UNIFORM_BUFFER, 3, scene_uniform);
 
 	if (rbg->rgb_type == 0x04  ) {
 		if (tex_surface_1 == 0) {
 			glActiveTexture(GL_TEXTURE0);
+      glGenTextures(1, &tex_surface_1);
 			glBindTexture(GL_TEXTURE_2D, tex_surface_1);
 			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 			ErrorHandle("glBindTexture");
@@ -2281,6 +2332,7 @@ public:
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			ErrorHandle("glTexParameteri");
+      glBindImageTexture(0, tex_surface_1, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
 		}
 		else {
 			glBindImageTexture(0, tex_surface_1, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);

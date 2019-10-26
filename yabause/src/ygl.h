@@ -251,8 +251,15 @@ typedef struct {
 	YglCacheHash *HashTable[HASHSIZE];
 	YglCacheHash CashLink[HASHSIZE * 2];
 	u32 CashLink_index;
-	GLuint textureID;
-	GLuint pixelBufferID;
+
+	//GLuint textureID;
+	//GLuint pixelBufferID;
+
+  int current;
+  GLuint textureID_in[2];
+  GLuint pixelBufferID_in[2];
+  unsigned int * texture_in[2];
+
 } YglTextureManager;
 
 extern YglTextureManager * YglTM;
@@ -312,6 +319,7 @@ enum
    PG_VDP2_PER_LINE_ALPHA,
    PG_VDP2_NORMAL_CRAM,
    PG_VDP2_NORMAL_CRAM_SPECIAL_PRIORITY,
+   PG_VDP2_NORMAL_CRAM_SPECIAL_PRIORITY_COLOROFFSET,
    PG_VDP2_ADDCOLOR_CRAM,
    PG_VDP2_BLUR_CRAM,
    PG_VDP2_MOSAIC_CRAM,
@@ -392,6 +400,7 @@ typedef struct  {
  float u_emu_height;
  float u_vheight;
  int u_color_ram_offset;
+ float u_viewport_offset;
 } UniformFrameBuffer;
 
 /*
@@ -415,7 +424,7 @@ typedef struct {
    short ux1,uy1,ux2,uy2;
    int blendmode;
    int preblendmode;
-   int bwin0,logwin0,bwin1,logwin1,winmode;
+   int bwin0,logwin0,bwin1,logwin1, bwinsp, logwinsp, winmode;
    GLuint vertexp;
    GLuint texcoordp;
    GLuint mtxModelView;
@@ -433,6 +442,7 @@ typedef struct {
    int id;
    int colornumber;
    GLuint interuput_texture;
+   u32 specialcolormode;
 } YglProgram;
 
 typedef struct {
@@ -583,6 +593,7 @@ typedef struct {
    int rbg_use_compute_shader;
    YglTextureManager * texture_manager;
    GLsync sync;
+   GLsync frame_sync;
     GLuint default_fbo;
    YglPerLineInfo bg[enBGMAX];
    u32 targetfbo;
@@ -605,6 +616,11 @@ typedef struct {
    int msb_shadow_count_[2];
 
    int rotate_screen;
+
+   int screen_width;
+   int screen_height;
+   int keep_aspect;
+   int isFullScreen;
 
 }  Ygl;
 
@@ -688,6 +704,7 @@ int YglExpandVertexBuffer( int addsize, void ** vpos, void **tcpos, void **vapos
 intptr_t YglGetOffset( void* address );
 int YglBlitFramebuffer(u32 srcTexture, u32 targetFbo, float w, float h);
 int YglBlitFXAA(u32 sourceTexture, float w, float h);
+int YglWindowFramebuffer(u32 srcTexture, u32 targetFbo, float w, float h, float ww, float hh);
 
 void YglRenderVDP1(void);
 

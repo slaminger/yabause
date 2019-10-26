@@ -15,19 +15,19 @@ $ cd build
 ### Generate Makefile for ODROID XU4
 
 ```
-$ cmake ../yabause -DYAB_PORTS=retro_arena -DYAB_WANT_DYNAREC_DEVMIYAX=ON -DYAB_WANT_ARM7=ON -DCMAKE_TOOLCHAIN_FILE=../yabause/src/retro_arena/xu4.cmake -DCMAKE_INSTALL_PREFIX=/opt/retroarena/emulators/yabause/
+$ cmake ../yabause -DGIT_EXECUTABLE=/usr/bin/git -DYAB_PORTS=retro_arena -DYAB_WANT_DYNAREC_DEVMIYAX=ON -DYAB_WANT_ARM7=ON -DCMAKE_TOOLCHAIN_FILE=../yabause/src/retro_arena/xu4.cmake -DCMAKE_INSTALL_PREFIX=/opt/retroarena/emulators/yabause/
 ```
 
 ### Generate Makefile for ODROID N2
 
 ```
-$ cmake ../yabause -DYAB_PORTS=retro_arena -DYAB_WANT_DYNAREC_DEVMIYAX=ON -DCMAKE_TOOLCHAIN_FILE=../yabause/src/retro_arena/n2.cmake -DCMAKE_INSTALL_PREFIX=/opt/retroarena/emulators/yabause/
+$ cmake ../yabause -DGIT_EXECUTABLE=/usr/bin/git -DYAB_PORTS=retro_arena -DYAB_WANT_DYNAREC_DEVMIYAX=ON -DCMAKE_TOOLCHAIN_FILE=../yabause/src/retro_arena/n2.cmake -DCMAKE_INSTALL_PREFIX=/opt/retroarena/emulators/yabause/
 ```
 
 ### Generate Makefile for RockPro64
 
 ```
-$ cmake ../yabause -DYAB_PORTS=retro_arena -DYAB_WANT_DYNAREC_DEVMIYAX=ON -DYAB_WANT_ARM7=ON -DCMAKE_TOOLCHAIN_FILE=../yabause/src/retro_arena/rp64.cmake -DCMAKE_INSTALL_PREFIX=/opt/retroarena/emulators/yabause/
+$ cmake ../yabause -DGIT_EXECUTABLE=/usr/bin/git -DYAB_PORTS=retro_arena -DYAB_WANT_DYNAREC_DEVMIYAX=ON -DYAB_WANT_ARM7=ON -DCMAKE_TOOLCHAIN_FILE=../yabause/src/retro_arena/rp64.cmake -DCMAKE_INSTALL_PREFIX=/opt/retroarena/emulators/yabause/
 ```
 
 ### Build
@@ -43,7 +43,12 @@ Ater that you are ready to run ```./src/retro_arena/yabasanshiro``` .
 |-----------|-------------------------------|----------------------------------------------|
 | -b STRING | --bios STRING                 | bios file                                    |
 | -i STRING | --iso STRING                  | iso/cue file                                 |
-| -r NUMBER | --resolution_mode NUMBER      | 0 .. Native, 1 .. 4x, 2 .. 2x, 3 .. Original |
+| -r NUMBER | --resolution_mode NUMBER      | 0 .. Native                                  |
+|           |                               | 1 .. 4x                                      |                                      
+|           |                               | 2 .. 2x                                      | 
+|           |                               | 3 .. Original                                |
+|           |                               | 4 .. 720p                                    | 
+|           |                               | 5 .. 1080p                                   |
 | -a        | --keep_aspect_rate            | |
 | -s NUMBER | --scps_sync_per_frame NUMBER  | |
 | -nf        | --no_frame_skip              |  disable frame skip |

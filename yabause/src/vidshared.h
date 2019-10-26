@@ -188,7 +188,7 @@ typedef struct
    vdp2rotationparameter_struct * FASTCALL (*GetKValueB)(vdp2rotationparameter_struct*,int);   
    vdp2rotationparameter_struct * FASTCALL (*GetRParam)(void *, int h,int v);
    u32 LineColorBase;
-   
+   u32 hres_shift;
    void (*LoadLineParams)(void *, void *, int line, Vdp2* lines);
 
    int bad_cycle_setting;
@@ -200,6 +200,8 @@ typedef struct
       int flipfunction;
    }pipe[2];
 
+   u16 char_bank[4];
+   u16 pname_bank[4];
 
 } vdp2draw_struct;
 
@@ -369,8 +371,8 @@ static INLINE void CalcPlaneAddr(vdp2draw_struct *info, u32 tmp)
    int deca = info->planeh + info->planew - 2;
    int multi = info->planeh * info->planew;
      
-   //if (Vdp2Regs->VRSIZE & 0x8000)
-   //{
+   if (Vdp2Regs->VRSIZE & 0x8000)
+   {
       if (info->patterndatasize == 1)
       {
          if (info->patternwh == 1)
@@ -385,24 +387,24 @@ static INLINE void CalcPlaneAddr(vdp2draw_struct *info, u32 tmp)
          else
             info->addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
       }
-   /*}
+   }
    else
    {
       if (info->patterndatasize == 1)
       {
          if (info->patternwh == 1)
-            info->addr = ((tmp & 0x1F) >> deca) * (multi * 0x2000);
+            info->addr = ((tmp & 0x3F) >> deca) * (multi * 0x2000);
          else
-            info->addr = ((tmp & 0x7F) >> deca) * (multi * 0x800);
+            info->addr = ((tmp & 0xFF) >> deca) * (multi * 0x800);
       }
       else
       {
          if (info->patternwh == 1)
-            info->addr = ((tmp & 0xF) >> deca) * (multi * 0x4000);
+            info->addr = ((tmp & 0x1F) >> deca) * (multi * 0x4000);
          else
-            info->addr = ((tmp & 0x3F) >> deca) * (multi * 0x1000);
+            info->addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
       }
-   }*/
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -922,6 +924,7 @@ static INLINE void Vdp1GetSpritePixelInfo(int type, u16 * pixel, spritepixelinfo
       {
          // Type C(1-bit special priority, 8-bit color data - bit 7 is shared)
          spi->priority = (*pixel >> 7) & 0x1;
+         *pixel &= 0xFF;
          spi->normalshadow = (*pixel == 0xFE);
          break;
       }
@@ -930,6 +933,7 @@ static INLINE void Vdp1GetSpritePixelInfo(int type, u16 * pixel, spritepixelinfo
          // Type D(1-bit special priority, 1-bit special color calculation, 8-bit color data - bits 6 and 7 are shared)
          spi->priority = (*pixel >> 7) & 0x1;
          spi->colorcalc = (*pixel >> 6) & 0x1;
+         *pixel &= 0xFF;
          spi->normalshadow = (*pixel == 0xFE);
          break;
       }
@@ -937,6 +941,7 @@ static INLINE void Vdp1GetSpritePixelInfo(int type, u16 * pixel, spritepixelinfo
       {
          // Type E(2-bit special priority, 8-bit color data - bits 6 and 7 are shared)
          spi->priority = (*pixel >> 6) & 0x3;
+         *pixel &= 0xFF;
          spi->normalshadow = (*pixel == 0xFE);
          break;
       }
@@ -944,6 +949,7 @@ static INLINE void Vdp1GetSpritePixelInfo(int type, u16 * pixel, spritepixelinfo
       {
          // Type F(2-bit special color calculation, 8-bit color data - bits 6 and 7 are shared)
          spi->colorcalc = (*pixel >> 6) & 0x3;
+         *pixel &= 0xFF;
          spi->normalshadow = (*pixel == 0xFE);
          break;
       }
@@ -955,7 +961,7 @@ static INLINE void Vdp1GetSpritePixelInfo(int type, u16 * pixel, spritepixelinfo
 
 static INLINE void Vdp1ProcessSpritePixel(int type, u16 *pixel, int *shadow, int *normalshadow, int *priority, int *colorcalc)
 {
-   spritepixelinfo_struct spi;
+  spritepixelinfo_struct spi = { 0 };
 
    Vdp1GetSpritePixelInfo(type, pixel, &spi);
    *shadow = spi.msbshadow;

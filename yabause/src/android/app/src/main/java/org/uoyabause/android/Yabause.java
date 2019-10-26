@@ -266,7 +266,7 @@ public class Yabause extends AppCompatActivity implements  FileDialog.FileSelect
         yabauseThread = new YabauseRunnable(this);
 
         UiModeManager uiModeManager = (UiModeManager) getSystemService(Context.UI_MODE_SERVICE);
-        if (uiModeManager.getCurrentModeType() != Configuration.UI_MODE_TYPE_TELEVISION) {
+    if (uiModeManager.getCurrentModeType() != Configuration.UI_MODE_TYPE_TELEVISION && !BuildConfig.BUILD_TYPE.equals("pro") ) {
             SharedPreferences prefs = getSharedPreferences("private", Context.MODE_PRIVATE);
             Boolean hasDonated = prefs.getBoolean("donated", false);
             if( hasDonated ) {
@@ -870,6 +870,13 @@ public class Yabause extends AppCompatActivity implements  FileDialog.FileSelect
         Log.d(TAG, "setPolygonGenerationMode " + iPg.toString());
 
 
+    boolean keep_aspectrate = sharedPref.getBoolean("pref_keepaspectrate", true);
+
+    if(keep_aspectrate) {
+      YabauseRunnable.setKeepAspect(1);
+    }else {
+      YabauseRunnable.setKeepAspect(0);
+    }
 
         boolean audioout = sharedPref.getBoolean("pref_audio", true);
         if (audioout) {
