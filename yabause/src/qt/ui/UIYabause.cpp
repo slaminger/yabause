@@ -463,93 +463,98 @@ void UIYabause::sizeRequested( const QSize& s )
 
 void UIYabause::fixAspectRatio( int width , int height )
 {
-	int aspectRatio = QtYabause::volatileSettings()->value( "Video/AspectRatio",1).toInt();
+	int aspectRatio = QtYabause::volatileSettings()->value( "Video/AspectRatio",0).toInt();
 
-	switch( aspectRatio )
-	{
-		case 0:
-			setMaximumSize( QWIDGETSIZE_MAX, QWIDGETSIZE_MAX );
-			setMinimumSize( 0,0 );
-			break;
-		case 1:
-		case 2:
-		{
-      if (this->isFullScreen()) {
+  switch (aspectRatio)
+  {
+  case 0:
+  case 1:
+  case 2:
+  {
+    if (this->isFullScreen()) {
 
-        if (aspectRatio == 1) {
-          float specratio = (float)width / (float)height;
-          int saturnw = 4;
-          int saturnh = 3;
-
-          VolatileSettings* vs = QtYabause::volatileSettings();
-          if (vs->value("Video/RotateScreen").toBool()) {
-            if (aspectRatio == 1) {
-              saturnw = 3;
-              saturnh = 4;
-            }
-            else {
-              saturnw = 9;
-              saturnh = 16;
-            }
-          }
-          else {
-            if (aspectRatio == 1) {
-              saturnw = 4;
-              saturnh = 3;
-            }
-            else {
-              saturnw = 16;
-              saturnh = 9;
-            }
-          }
-          float saturnraito = (float)saturnw / (float)saturnh;
-          float revraito = (float)saturnh / (float)saturnw;
-
-          if (specratio > saturnraito){
-
-            mYabauseGL->viewport_width_ = height * saturnraito;
-            mYabauseGL->viewport_height_ = height;
-            mYabauseGL->viewport_origin_x_ = (width - mYabauseGL->viewport_width_) / 2.0;
-            mYabauseGL->viewport_origin_y_ = (height - mYabauseGL->viewport_height_) / 2.0;
-          }
-          else{
-            mYabauseGL->viewport_width_ = width;
-            mYabauseGL->viewport_height_ = height * revraito;
-            mYabauseGL->viewport_origin_x_ = (width - mYabauseGL->viewport_width_) / 2.0;
-            mYabauseGL->viewport_origin_y_ = (height - mYabauseGL->viewport_height_) / 2.0;
-          }
-        }
-
-      }
-      else{
-        int heightOffset = toolBar->height();
-        heightOffset += menubar->height();
-        int height;
+      if (aspectRatio == 0) {
+        mYabauseGL->viewport_width_ = width;
+        mYabauseGL->viewport_height_ = height;
+        mYabauseGL->viewport_origin_x_ = 0;
+        mYabauseGL->viewport_origin_y_ = 0;
+#if 0
+        float specratio = (float)width / (float)height;
+        int saturnw = 4;
+        int saturnh = 3;
 
         VolatileSettings* vs = QtYabause::volatileSettings();
         if (vs->value("Video/RotateScreen").toBool()) {
-          if (aspectRatio == 1)
-            height = 4 * ((float)width / 3);
-          else
-            height = 16 * ((float)width / 9);
+          if (aspectRatio == 1) {
+            saturnw = 3;
+            saturnh = 4;
+          }
+          else {
+            saturnw = 9;
+            saturnh = 16;
+          }
         }
         else {
-
-          if (aspectRatio == 1)
-            height = 3 * ((float)width / 4);
-          else
-            height = 9 * ((float)width / 16);
+          if (aspectRatio == 1) {
+            saturnw = 4;
+            saturnh = 3;
+          }
+          else {
+            saturnw = 16;
+            saturnh = 9;
+          }
         }
+        float saturnraito = (float)saturnw / (float)saturnh;
+        float revraito = (float)saturnh / (float)saturnw;
 
-        mouseYRatio = 240.0 / (float)height * 2.0 * (float)mouseSensitivity / 100.0;
+        if (specratio > saturnraito) {
 
-        adjustHeight(height );
-        mYabauseGL->viewport_height_ = height - heightOffset;
-        setFixedHeight(height);
-
+          mYabauseGL->viewport_width_ = height * saturnraito;
+          mYabauseGL->viewport_height_ = height;
+          mYabauseGL->viewport_origin_x_ = (width - mYabauseGL->viewport_width_) / 2.0;
+          mYabauseGL->viewport_origin_y_ = (height - mYabauseGL->viewport_height_) / 2.0;
+        }
+        else {
+          mYabauseGL->viewport_width_ = width;
+          mYabauseGL->viewport_height_ = height * revraito;
+          mYabauseGL->viewport_origin_x_ = (width - mYabauseGL->viewport_width_) / 2.0;
+          mYabauseGL->viewport_origin_y_ = (height - mYabauseGL->viewport_height_) / 2.0;
       }
-			break;
-		}
+#endif
+    }
+  }
+    else {
+      int heightOffset = toolBar->height();
+      heightOffset += menubar->height();
+      int height;
+
+      VolatileSettings* vs = QtYabause::volatileSettings();
+      if (vs->value("Video/RotateScreen").toBool()) {
+        if (aspectRatio == 0 || aspectRatio == 1)
+          height = 4 * ((float)width / 3);
+        else
+          height = 16 * ((float)width / 9);
+      }
+      else {
+        if (aspectRatio == 0 || aspectRatio == 1)
+          height = 3 * ((float)width / 4);
+        else
+          height = 9 * ((float)width / 16);
+      }
+
+      mouseYRatio = 240.0 / (float)height * 2.0 * (float)mouseSensitivity / 100.0;
+
+      adjustHeight(height);
+      mYabauseGL->viewport_height_ = height - heightOffset;
+      setFixedHeight(height);
+
+    }
+    break;
+  }
+		case 3:
+      setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+      setMinimumSize(0, 0);
+      break;
 	}
 }
 
@@ -680,6 +685,8 @@ void UIYabause::toggleFullscreen( int width, int height, bool f, int videoFormat
 
 void UIYabause::fullscreenRequested( bool f )
 {
+  mYabauseGL->setFullscren(f);
+
 	if ( isFullScreen() && !f )
 	{
 #ifdef USE_UNIFIED_TITLE_TOOLBAR
@@ -724,6 +731,7 @@ void UIYabause::fullscreenRequested( bool f )
 			toolBar->hide();
 
 		hideMouseTimer->start(3 * 1000);
+
 	}
 	if ( aViewFullscreen->isChecked() != f )
 		aViewFullscreen->setChecked( f );
@@ -895,10 +903,27 @@ void UIYabause::on_aFileSettings_triggered()
 
 		if (newhash["Video/WindowWidth"] != hash["Video/WindowWidth"] || newhash["Video/WindowHeight"] != hash["Video/WindowHeight"] ||
           newhash["View/Menubar"] != hash["View/Menubar"] || newhash["View/Toolbar"] != hash["View/Toolbar"] || 
-			 newhash["Input/GunMouseSensitivity"] != hash["Input/GunMouseSensitivity"])
-			sizeRequested(QSize(newhash["Video/WindowWidth"].toInt(),newhash["Video/WindowHeight"].toInt()));
+          newhash["Input/GunMouseSensitivity"] != hash["Input/GunMouseSensitivity"])
+        sizeRequested(QSize(newhash["Video/WindowWidth"].toInt(),newhash["Video/WindowHeight"].toInt()));
     fixAspectRatio(rect().width(), rect().height());
-		
+
+    if (newhash["Video/resolution_mode"] != hash["Video/resolution_mode"]) {
+      VideoSetSetting(VDP_SETTING_RESOLUTION_MODE, newhash["Video/resolution_mode"].toInt());
+    }
+
+    if (newhash["Video/rbg_resolution_mode"] != hash["Video/rbg_resolution_mode"]) {
+      VideoSetSetting(VDP_SETTING_RBG_RESOLUTION_MODE, newhash["Video/rbg_resolution_mode"].toInt());
+    }
+
+	if (newhash["Video/UseComputeShader"] != hash["Video/UseComputeShader"]) {
+		VideoSetSetting(VDP_SETTING_RBG_USE_COMPUTESHADER, newhash["Video/UseComputeShader"].toInt());
+	}
+
+  if (newhash["Video/polygon_generation_mode"] != hash["Video/polygon_generation_modee"]) {
+    VideoSetSetting(VDP_SETTING_POLYGON_MODE, newhash["Video/polygon_generation_mode"].toInt());
+  }
+
+
 		if (newhash["Video/FullscreenWidth"] != hash["Video/FullscreenWidth"] || 
 			newhash["Video/FullscreenHeight"] != hash["Video/FullscreenHeight"] ||
 			newhash["Video/Fullscreen"] != hash["Video/Fullscreen"])
@@ -926,7 +951,7 @@ void UIYabause::on_actionOpen_Tray_triggered()
 		mIsCdIn = false;
 	}
 	else{
-		const QString fn = CommonDialogs::getOpenFileName(QtYabause::volatileSettings()->value("Recents/ISOs").toString(), QtYabause::translate("Select your iso/cue/bin file"), QtYabause::translate("CD Images (*.iso *.cue *.bin *.mds *.ccd)"));
+		const QString fn = CommonDialogs::getOpenFileName(QtYabause::volatileSettings()->value("Recents/ISOs").toString(), QtYabause::translate("Select your iso/cue/bin file"), QtYabause::translate("CD Images (*.chd *.iso *.cue *.bin *.mds *.ccd)"));
 		if (!fn.isEmpty())
 		{
 			VolatileSettings* vs = QtYabause::volatileSettings();
@@ -951,7 +976,7 @@ void UIYabause::on_actionOpen_Tray_triggered()
 void UIYabause::on_aFileOpenISO_triggered()
 {
 	YabauseLocker locker( mYabauseThread );
-	const QString fn = CommonDialogs::getOpenFileName( QtYabause::volatileSettings()->value( "Recents/ISOs" ).toString(), QtYabause::translate( "Select your iso/cue/bin file" ), QtYabause::translate( "CD Images (*.iso *.cue *.bin *.mds *.ccd)" ) );
+	const QString fn = CommonDialogs::getOpenFileName( QtYabause::volatileSettings()->value( "Recents/ISOs" ).toString(), QtYabause::translate( "Select your iso/cue/bin file" ), QtYabause::translate( "CD Images (*.chd *.iso *.cue *.bin *.mds *.ccd)" ) );
 	if ( !fn.isEmpty() )
 	{
 		VolatileSettings* vs = QtYabause::volatileSettings();

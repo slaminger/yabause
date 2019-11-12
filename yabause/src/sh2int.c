@@ -18,6 +18,25 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
 
 /*! \file sh2int.c
     \brief SH2 interpreter interface
@@ -156,7 +175,7 @@ fetchfunc fetchlist[0x100];
 
 //////////////////////////////////////////////////////////////////////////////
 
-static INLINE void SH2HandleInterrupts(SH2_struct *context)
+void SH2HandleInterrupts(SH2_struct *context)
 {
   if (context->NumberOfInterrupts != 0)
   {
@@ -170,7 +189,7 @@ static INLINE void SH2HandleInterrupts(SH2_struct *context)
       MappedMemoryWriteLong(context->regs.R[15], context->regs.PC);
       context->regs.SR.part.I = context->interrupts[context->NumberOfInterrupts - 1].level;
       context->regs.PC = MappedMemoryReadLong(context->regs.VBR + (context->interrupts[context->NumberOfInterrupts - 1].vector << 2));  
-      LOG("[%s] Exception %u, vecnum=%u, saved PC=0x%08x --- New PC=0x%08x\n", context->isslave?"SH2-S":"SH2-M", 9, context->interrupts[context->NumberOfInterrupts - 1].vector, oldpc, context->regs.PC);
+      //LOG("[%s] Exception %u, vecnum=%02x, saved PC=0x%08x --- New PC=0x%08x\n", context->isslave?"SH2-S":"SH2-M", 9, context->interrupts[context->NumberOfInterrupts - 1].vector, oldpc, context->regs.PC);
       context->NumberOfInterrupts--;
       context->isIdle = 0;
       context->isSleeping = 0;
@@ -2431,7 +2450,7 @@ static void FASTCALL SH2trapa(SH2_struct * sh)
    MappedMemoryWriteLong(sh->regs.R[15],sh->regs.PC + 2);
    sh->regs.PC = MappedMemoryReadLong(sh->regs.VBR+(imm<<2));
 
-   LOG("[%s] Exception %u, vecnum=%u, saved PC=0x%08x --- New PC=0x%08x\n", sh->isslave ? "SH2-S" : "SH2-M", 8, imm, oldpc, sh->regs.PC);
+   //LOG("[%s] Exception %u, vecnum=%u, saved PC=0x%08x --- New PC=0x%08x\n", sh->isslave ? "SH2-S" : "SH2-M", 8, imm, oldpc, sh->regs.PC);
 
    sh->cycles += 8;
 }

@@ -17,6 +17,26 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
+
 #ifndef  _YGL_H_
 #define  _YGL_H_
 #ifdef __cplusplus
@@ -29,7 +49,7 @@ extern "C" {
     #include <glsym/glsym.h>
     #include <glsm/glsm.h>
 #elif defined(__ANDROID__)
-    #include <GLES3/gl3.h>
+    #include <GLES3/gl31.h>
     #include <GLES3/gl3ext.h>
     #include <EGL/egl.h>
 
@@ -95,8 +115,8 @@ extern PFNGLPATCHPARAMETERIPROC glPatchParameteri;
 #define GL_ATOMIC_COUNTER_BARRIER_BIT     0x00001000
 #define GL_ALL_BARRIER_BITS               0xFFFFFFFF
 
-typedef void (* PFNGLMEMORYBARRIERPROC) (GLbitfield barriers);
-extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
+//typedef void (* PFNGLMEMORYBARRIERPROC) (GLbitfield barriers);
+//extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
 
 #elif defined(_WIN32)
 
@@ -185,8 +205,9 @@ extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
     #if defined(_OGL3_)
         #define GL_GLEXT_PROTOTYPES 1
         #define GLX_GLXEXT_PROTOTYPES 1
-        #include <GL/glew.h>
+        //#include <GL/glew.h>
         #include <GL/gl.h>
+        #include <GL/glext.h>
     #elif defined(_OGLES3_)
         #define GL_GLEXT_PROTOTYPES 1
         #define GLX_GLXEXT_PROTOTYPES 1
@@ -251,8 +272,15 @@ typedef struct {
 	YglCacheHash *HashTable[HASHSIZE];
 	YglCacheHash CashLink[HASHSIZE * 2];
 	u32 CashLink_index;
-	GLuint textureID;
-	GLuint pixelBufferID;
+
+	//GLuint textureID;
+	//GLuint pixelBufferID;
+
+  int current;
+  GLuint textureID_in[2];
+  GLuint pixelBufferID_in[2];
+  unsigned int * texture_in[2];
+
 } YglTextureManager;
 
 extern YglTextureManager * YglTM;
@@ -312,6 +340,7 @@ enum
    PG_VDP2_PER_LINE_ALPHA,
    PG_VDP2_NORMAL_CRAM,
    PG_VDP2_NORMAL_CRAM_SPECIAL_PRIORITY,
+   PG_VDP2_NORMAL_CRAM_SPECIAL_PRIORITY_COLOROFFSET,
    PG_VDP2_ADDCOLOR_CRAM,
    PG_VDP2_BLUR_CRAM,
    PG_VDP2_MOSAIC_CRAM,
@@ -392,6 +421,7 @@ typedef struct  {
  float u_emu_height;
  float u_vheight;
  int u_color_ram_offset;
+ float u_viewport_offset;
 } UniformFrameBuffer;
 
 /*
@@ -415,7 +445,7 @@ typedef struct {
    short ux1,uy1,ux2,uy2;
    int blendmode;
    int preblendmode;
-   int bwin0,logwin0,bwin1,logwin1,winmode;
+   int bwin0,logwin0,bwin1,logwin1, bwinsp, logwinsp, winmode;
    GLuint vertexp;
    GLuint texcoordp;
    GLuint mtxModelView;
@@ -432,6 +462,8 @@ typedef struct {
    u32 lineTexture;
    int id;
    int colornumber;
+   GLuint interuput_texture;
+   u32 specialcolormode;
 } YglProgram;
 
 typedef struct {
@@ -465,14 +497,30 @@ typedef enum
 
 typedef enum
 {
-	RES_NATIVE = 0,
-	RES_4x,
-	RES_2x,
-    RES_ORIGINAL,
-    RES_720P,
-    RES_1080P
+  RES_NATIVE = 0,
+  RES_4x,
+  RES_2x,
+  RES_ORIGINAL,
+  RES_720P,
+  RES_1080P
 } RESOLUTION_MODE;
 
+typedef enum
+{
+  RBG_RES_ORIGINAL = 0,
+  RBG_RES_2x,
+  RBG_RES_720P,
+  RBG_RES_1080P,
+  RBG_RES_FIT_TO_EMULATION
+} RBG_RESOLUTION_MODE;
+
+typedef enum
+{
+  ORIGINAL = 0,
+  _4_3,
+  _16_9,
+  FULL,
+} ASPECT_RATE_MODE;
 
 typedef enum {
 	NBG0 = 0,
@@ -569,8 +617,11 @@ typedef struct {
    AAMODE aamode;
    POLYGONMODE polygonmode;
    RESOLUTION_MODE resolution_mode;
+   RBG_RESOLUTION_MODE rbg_resolution_mode;
+   int rbg_use_compute_shader;
    YglTextureManager * texture_manager;
    GLsync sync;
+   GLsync frame_sync;
     GLuint default_fbo;
    YglPerLineInfo bg[enBGMAX];
    u32 targetfbo;
@@ -594,16 +645,43 @@ typedef struct {
 
    int rotate_screen;
 
+   int screen_width;
+   int screen_height;
+   int isFullScreen;
+
+   ASPECT_RATE_MODE aspect_rate_mode;
+
 }  Ygl;
 
 extern Ygl * _Ygl;
 
+// Rotate Screen
+
+typedef struct {
+  int useb;
+  vdp2draw_struct info;
+  YglTexture texture;
+  int rgb_type;
+  int pagesize;
+  int patternshift;
+  u32 LineColorRamAdress;
+  vdp2draw_struct line_info;
+  YglTexture line_texture;
+  YglCache c;
+  YglCache cline;
+  int vres;
+  int hres;
+  int async;
+  volatile int vdp2_sync_flg;
+  float rotate_mval_h;
+  float rotate_mval_v;
+} RBGDrawInfo;
 
 int YglGLInit(int, int);
 int YglInit(int, int, unsigned int);
 void YglDeInit(void);
 float * YglQuad(vdp2draw_struct *, YglTexture *, YglCache * c);
-int YglQuadRbg0(vdp2draw_struct * input, YglTexture * output, YglCache * c, YglCache * line);
+int YglQuadRbg0(vdp2draw_struct * input, YglTexture * output, YglCache * c, YglCache * line, int rbg_type );
 void YglQuadOffset(vdp2draw_struct * input, YglTexture * output, YglCache * c, int cx, int cy, float sx, float sy);
 void YglCachedQuadOffset(vdp2draw_struct * input, YglCache * cache, int cx, int cy, float sx, float sy);
 void YglCachedQuad(vdp2draw_struct *, YglCache *);
@@ -655,6 +733,7 @@ int YglExpandVertexBuffer( int addsize, void ** vpos, void **tcpos, void **vapos
 intptr_t YglGetOffset( void* address );
 int YglBlitFramebuffer(u32 srcTexture, u32 targetFbo, float w, float h);
 int YglBlitFXAA(u32 sourceTexture, float w, float h);
+int YglWindowFramebuffer(u32 srcTexture, u32 targetFbo, float w, float h, float ww, float hh);
 
 void YglRenderVDP1(void);
 
@@ -680,7 +759,6 @@ int YglCleanUpWindow(YglProgram * prg);
 
 void YglEraseWriteVDP1();
 void YglFrameChangeVDP1();
-
 
 #if !defined(__APPLE__) && !defined(__ANDROID__) && !defined(_USEGLEW_) && !defined(_OGLES3_) && !defined(__LIBRETRO__) &&  !defined(NX)
 

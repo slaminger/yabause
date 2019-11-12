@@ -94,7 +94,17 @@ const Items mResolutionMode = Items()
 << Item("0", "Native (native resolution of Window)")
 << Item("1", "4x")
 << Item("2", "2x")
-<< Item("3", "Original");
+<< Item("3", "Original")
+<< Item("4", "720P")
+<< Item("5", "1080P");
+
+const Items mRbgResolutionMode = Items()
+<< Item("0", "Original")
+<< Item("1", "2x")
+<< Item("2", "720P")
+<< Item("3", "1080P")
+<< Item("4", "Fit to Emulation Resolution");
+
 
 UISettings::UISettings( QList <supportedRes_struct> *supportedResolutions, QList <translation_struct> *translations, QWidget* p )
 	: QDialog( p )
@@ -343,6 +353,10 @@ void UISettings::loadCores()
   foreach(const Item& it, mResolutionMode)
     cbResolution->addItem(QtYabause::translate(it.Name), it.id);
 
+  // RbgResolution
+  foreach(const Item& it, mRbgResolutionMode)
+    cbRBGREsolution->addItem(QtYabause::translate(it.Name), it.id);
+
 	// SND Drivers
 	for ( int i = 0; SNDCoreList[i] != NULL; i++ )
 		cbSoundCore->addItem( QtYabause::translate( SNDCoreList[i]->Name ), SNDCoreList[i]->id );
@@ -367,9 +381,10 @@ void UISettings::loadCores()
    for (int i = 0; M68KCoreList[i] != NULL; i++)
       cb68kCore->addItem(QtYabause::translate(M68KCoreList[i]->Name), M68KCoreList[i]->id);
 
-	cbAspectRatio->addItem( QtYabause::translate( "Fit to window" ), 0 );
+  cbAspectRatio->addItem(QtYabause::translate("Original aspect ratio"), 0);
 	cbAspectRatio->addItem( QtYabause::translate( "Fixed aspect ratio: 4:3" ), 1 );
 	cbAspectRatio->addItem( QtYabause::translate( "Fixed aspect ratio: 16:9" ), 2 );
+  cbAspectRatio->addItem(QtYabause::translate("Fit to window"), 3);
 }
 
 void UISettings::loadSupportedResolutions()
@@ -487,7 +502,7 @@ void UISettings::loadSettings()
 	cbOSDCore->setCurrentIndex( cbOSDCore->findData( s->value( "Video/OSDCore", QtYabause::defaultOSDCore().id ).toInt() ) );
 #endif
 
-	cbAspectRatio->setCurrentIndex( s->value( "Video/AspectRatio", 1 ).toInt() );
+	cbAspectRatio->setCurrentIndex( s->value( "Video/AspectRatio", 0 ).toInt() );
 	leWinWidth->setText( s->value( "Video/WindowWidth", s->value( "Video/Width", 640 ) ).toString() );
 	leWinHeight->setText( s->value( "Video/WindowHeight", s->value( "Video/Height", 480 ) ).toString() );
 	QString text = QString("%1x%2").arg(s->value( "Video/FullscreenWidth", s->value( "Video/Width", 1920 ) ).toString(),
@@ -499,10 +514,11 @@ void UISettings::loadSettings()
 	cbFilterMode->setCurrentIndex(cbFilterMode->findData(s->value("Video/filter_type", mVideoFilterMode.at(0).id).toInt()));
 	cbPolygonGeneration->setCurrentIndex(cbPolygonGeneration->findData(s->value("Video/polygon_generation_mode", mPolygonGenerationMode.at(0).id).toInt()));
   cbResolution->setCurrentIndex(cbResolution->findData(s->value("Video/resolution_mode", mResolutionMode.at(0).id).toInt()));
-
-   cbEnableIntegerPixelScaling->setChecked(s->value("Video/EnableIntegerPixelScaling", false).toBool());
-   sbIntegerPixelScalingMultiplier->setValue(s->value("Video/IntegerPixelScalingMultiplier", 2).toInt());
+  cbRBGREsolution->setCurrentIndex(cbResolution->findData(s->value("Video/rbg_resolution_mode", mRbgResolutionMode.at(0).id).toInt()));
+//   cbEnableIntegerPixelScaling->setChecked(s->value("Video/EnableIntegerPixelScaling", false).toBool());
+//   sbIntegerPixelScalingMultiplier->setValue(s->value("Video/IntegerPixelScalingMultiplier", 2).toInt());
    cbRotateScreen->setChecked(s->value("Video/RotateScreen").toBool());
+   cbUseComputeShader->setChecked(s->value("Video/UseComputeShader").toBool());
 
 	// sound
 	cbSoundCore->setCurrentIndex( cbSoundCore->findData( s->value( "Sound/SoundCore", QtYabause::defaultSNDCore().id ).toInt() ) );
@@ -598,8 +614,10 @@ void UISettings::saveSettings()
 	s->setValue( "Video/filter_type", cbFilterMode->itemData(cbFilterMode->currentIndex()).toInt());
 	s->setValue( "Video/polygon_generation_mode", cbPolygonGeneration->itemData(cbPolygonGeneration->currentIndex()).toInt());
   s->setValue("Video/resolution_mode", cbResolution->itemData(cbResolution->currentIndex()).toInt());
-   s->setValue("Video/EnableIntegerPixelScaling", cbEnableIntegerPixelScaling->isChecked());
-   s->setValue("Video/IntegerPixelScalingMultiplier", sbIntegerPixelScalingMultiplier->value());
+  s->setValue("Video/rbg_resolution_mode", cbResolution->itemData(cbRBGREsolution->currentIndex()).toInt());
+  s->setValue("Video/UseComputeShader", cbUseComputeShader->isChecked());
+//   s->setValue("Video/EnableIntegerPixelScaling", cbEnableIntegerPixelScaling->isChecked());
+//   s->setValue("Video/IntegerPixelScalingMultiplier", sbIntegerPixelScalingMultiplier->value());
 
 	s->setValue( "General/ClockSync", cbClockSync->isChecked() );
 	s->setValue( "General/FixedBaseTime", dteBaseTime->dateTime().toString(Qt::ISODate));
@@ -607,6 +625,8 @@ void UISettings::saveSettings()
 	s->setValue( "General/EnableMultiThreading", cbEnableMultiThreading->isChecked() );
 	s->setValue( "General/NumThreads", sbNumberOfThreads->value());
   s->setValue("Video/RotateScreen", cbRotateScreen->isChecked());
+
+  
 
   s->setValue("Sound/ScspSync", spinBox_scs_sync_count->value() );
   s->setValue("Sound/ScspMainMode", cbTimeMode->currentIndex() );

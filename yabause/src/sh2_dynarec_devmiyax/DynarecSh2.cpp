@@ -1,19 +1,20 @@
-/*  Copyright 2017 devMiyax(smiyaxdev@gmail.com)
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
 
-This file is part of Yabause.
+This file is part of YabaSanshiro.
 
-Yabause is free software; you can redistribute it and/or modify
+        YabaSanshiro is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
 
-Yabause is distributed in the hope that it will be useful,
+YabaSanshiro is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with Yabause; if not, write to the Free Software
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
@@ -29,6 +30,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include "debug.h"
 #include "yabause.h"
 #include "bios.h"
+extern "C" {
+#include "scu.h"
+}
 
 #include "DynarecSh2.h"
 #include "opcodes.h"
@@ -715,10 +719,10 @@ x86op_desc asm_list[] =
   opNULL
 }; 
 
-Block *CompileBlocks::Init(Block *dynaCode)
+void CompileBlocks::Init()
 {
-  dynaCode = (Block*)ALLOCATE(sizeof(Block)*NUMOFBLOCKS);
-  memset((void*)dynaCode, 0, sizeof(Block)*NUMOFBLOCKS);
+  dCode = (Block*)ALLOCATE(sizeof(Block)*NUMOFBLOCKS);
+  memset((void*)dCode, 0, sizeof(Block)*NUMOFBLOCKS);
 
   memset(LookupTable, 0, sizeof(LookupTable));
   memset(LookupTableRom, 0, sizeof(LookupTableRom));
@@ -728,11 +732,11 @@ Block *CompileBlocks::Init(Block *dynaCode)
   blockCount = 0;
   LastMakeBlock = 0;
 
-  g_CompleBlock = dynaCode;
+  g_CompleBlock = dCode;
   for (int i = 0; i < NUMOFBLOCKS; i++ ) {
     g_CompleBlock[i].id = i;
   }
-  return dynaCode;
+  return;
 }
 
 int CompileBlocks::opcodeIndex(u16 op)
@@ -1219,7 +1223,7 @@ int CompileBlocks::EmmitCode(Block *page, addrs * ParentT )
       break;
     }
 
-    if ((op & 0xF0FF) == 0x400e || (op & 0xF0FF) == 0x4007) // sh2_LDC_SR
+    if ( (op & 0xF0FF) == 0x400e || (op & 0xF0FF) == 0x4007) // sh2_LDC_SR
     {
       break;
     }
@@ -1328,9 +1332,9 @@ void DynarecSh2::ExecuteCount( u32 Count ) {
 
   m_pDynaSh2->exitcount = targetcnt;
 
-  if ((GET_SR() & 0xF0) < GET_ICOUNT()) {
-    this->CheckInterupt();
-  }
+  //if ((GET_SR() & 0xF0) < GET_ICOUNT()) {
+  //  this->CheckInterupt();
+  //}
 
   while (GET_COUNT() < targetcnt) {
     if (Execute() == IN_INFINITY_LOOP ) {
@@ -1500,12 +1504,13 @@ inline int DynarecSh2::Execute(){
         fflush(fp);
     }
 #endif
-  u32 prepc  = GET_PC();
-  //if(yabsys.frame_count == 1000){
- //   logenable_ = true;
-  //}
-  //if( logenable_ )
-  // LOG("[%s] dynaExecute start %08X %08X", (is_slave_ == false) ? "M" : "S", GET_PC(),GET_PR() );
+//  u32 prepc  = GET_PC();
+//  if(yabsys.frame_count == 7){
+//    logenable_ = true;
+//  }
+//  if (logenable_) {
+//    LOG("[%s] dynaExecute start %08X %08X", (is_slave_ == false) ? "M" : "S", GET_PC(), GET_PR());
+//  }
 #if defined(DEBUG_CPU) || defined(EXECUTE_STAT)
   if (is_slave_) { //statics_trigger_ == COLLECTING) {
     u64 pretime = YabauseGetTicks();
@@ -1576,7 +1581,7 @@ void DynarecSh2::AddInterrupt( u8 Vector, u8 level )
   m_IntruptTbl.push_back(tmp);
   m_IntruptTbl.unique(); 
 
-  //printf("AddInterrupt v:%d l:%d\n", Vector, level );
+  //LOG("AddInterrupt v:%s(%x) l:%d\n", ScuGetVectorString(Vector),Vector, level );
 
   if( m_IntruptTbl.size() > 1 ) {
     m_IntruptTbl.sort();
@@ -1595,7 +1600,7 @@ int DynarecSh2::CheckInterupt(){
     return 0;
   }
 
-  //LOG("CheckInterupt %d\n", m_IntruptTbl.size() );
+  
     
   YabThreadLock(mtx_);  
   dlstIntct::iterator pos = m_IntruptTbl.begin();
@@ -1626,6 +1631,9 @@ int DynarecSh2::InterruptRutine(u8 Vector, u8 level)
     memSetLong(m_pDynaSh2->GenReg[15], m_pDynaSh2->SysReg[3]);
     m_pDynaSh2->CtrlReg[0] |= ((u32)(level << 4) & 0x000000F0);
     m_pDynaSh2->SysReg[3] = memGetLong(m_pDynaSh2->CtrlReg[2] + (((u32)Vector) << 2));
+
+    //LOG("**** [%s] Exception vecnum=%s(%x), PC=%08X to %08X, level=%08X\n", (is_slave_ == false) ? "M" : "S", ScuGetVectorString(Vector), Vector,prepc, m_pDynaSh2->SysReg[3], level);
+
 #if defined(DEBUG_CPU)
 //    LOG("**** [%s] Exception vecnum=%u, PC=%08X to %08X, level=%08X\n", (is_slave_==false)?"M":"S", Vector, prepc, m_pDynaSh2->SysReg[3], level);
 #endif

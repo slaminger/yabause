@@ -51,12 +51,12 @@ set(yabause_SOURCES
 	osdcore.c
 	peripheral.c profile.c
 	frameprofile.cpp
-        Counter.cpp
 	scspdsp.c scu.c sh2core.c sh2d.c sh2iasm.c sh2idle.c sh2int.c sh2trace.c smpc.c snddummy.c
 	titan/titan.c
 	vdp1.c vdp2.c vdp2debug.c vidogl.c vidshared.c vidsoft.c
 	yabause.c
-        Counter.cpp
+	Counter.cpp
+	ygl_texture.cpp
 	sh2cache.c )
 	add_definitions(-DIMPROVED_SAVESTATES)
 if (ANDROID)
@@ -863,11 +863,11 @@ if( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
 endif()
 
 if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i686")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${YAB_OPTIMIZATION} -march=i686 -msse")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${YAB_OPTIMIZATION} -std=c11 -march=i686 -msse")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i686")
 if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${YAB_OPTIMIZATION}")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 ${YAB_OPTIMIZATION}")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv5tel")
@@ -925,6 +925,14 @@ else()
 	add_library(yabause ${yabause_SOURCES} ${yabause_HEADERS})
 endif()
 
+#-----------------------------------------------------------------------
+# libCHD
+include( ${CMAKE_SOURCE_DIR}/CMake/Packages/external_libchdr.cmake )
+include( ${CMAKE_SOURCE_DIR}/CMake/Packages/external_zlib.cmake )
+add_dependencies(yabause libchdr)
+add_dependencies(yabause zlib)
+
+
 if (YAB_WANT_C68K)
 	add_dependencies(yabause c68kinc)
 endif(YAB_WANT_C68K)
@@ -945,7 +953,7 @@ endmacro(yab_port_stop)
 
 macro(yab_port_success YAB_TARGET)
 	if (NOT YAB_MULTIBUILD)
-		set_target_properties(${YAB_TARGET} PROPERTIES OUTPUT_NAME yabause)
+		set_target_properties(${YAB_TARGET} PROPERTIES OUTPUT_NAME yabasanshiro)
 		set(YAB_PORT_NAME "yabause")
 	else ()
 		set(YAB_PORT_NAME ${YAB_TARGET})
@@ -957,7 +965,6 @@ set(YAB_MAN_DIR "share/man")
 if (NOT $ENV{PKGMANDIR} STREQUAL "")
     set(YAB_MAN_DIR $ENV{PKGMANDIR})
 endif ()
-
 
 foreach(PORT IN LISTS YAB_PORTS)
 	add_subdirectory(${PORT})

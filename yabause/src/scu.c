@@ -1,6 +1,5 @@
 /*  Copyright 2003-2006 Guillaume Duhamel
     Copyright 2005-2006 Theo Berkau
-    Copyright 2015 Shinya Miyamoto(devmiyax)
 
     This file is part of Yabause.
 
@@ -17,6 +16,25 @@
     You should have received a copy of the GNU General Public License
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
 /*! \file scu.c
@@ -43,6 +61,8 @@ scudspregs_struct * ScuDsp;
 scubp_struct * ScuBP;
 static int incFlg[4] = { 0 };
 static void ScuTestInterruptMask(void);
+
+void ScuRemoveInterruptByCPU(u32 pre, u32 after);
 
 //#define DSPLOG
 
@@ -192,7 +212,7 @@ static void DoDMA(u32 ReadAddress, unsigned int ReadAdd,
                   u32 WriteAddress, unsigned int WriteAdd,
                   u32 TransferSize)
 {
-  LOG("DoDMA src=%08X,dst=%08X,size=%d, line=%d\n", ReadAddress, WriteAddress, TransferSize, yabsys.LineCount );
+  LOG("DoDMA src=%08X,dst=%08X,size=%d, flame=%d:%d\n", ReadAddress, WriteAddress, TransferSize, yabsys.frame_count,yabsys.LineCount );
    if (ReadAdd == 0) {
       // DMA fill
 
@@ -219,8 +239,15 @@ static void DoDMA(u32 ReadAddress, unsigned int ReadAdd,
                          || ((ReadAddress & 0x1FF00000) == 0x05A00000)
                          || ((ReadAddress & 0x1DF00000) == 0x05C00000);
 
+      
       if ((WriteAddress & 0x1FFFFFFF) >= 0x5A00000
             && (WriteAddress & 0x1FFFFFFF) < 0x5FF0000) {
+
+          // hard/scu_/hon/p03_02.htm 
+          // B-bus read address is always 4
+          constant_source = 0;
+          ReadAdd = 4;
+
          // Fill a 32-bit value in 16-bit units.  We have to be careful to
          // avoid misaligned 32-bit accesses, because some hardware (e.g.
          // PSP) crashes on such accesses.
@@ -235,8 +262,7 @@ static void DoDMA(u32 ReadAddress, unsigned int ReadAdd,
             }
             while (counter < TransferSize) {
                MappedMemoryWriteWord(WriteAddress, (u16)(val >> 16));
-               WriteAddress += WriteAdd;
-               MappedMemoryWriteWord(WriteAddress, (u16)val);
+               MappedMemoryWriteWord(WriteAddress+2, (u16)val);
                WriteAddress += WriteAdd;
                counter += 4;
             }
@@ -245,8 +271,7 @@ static void DoDMA(u32 ReadAddress, unsigned int ReadAdd,
             while (counter < TransferSize) {
                u32 tmp = MappedMemoryReadLong(ReadAddress);
                MappedMemoryWriteWord(WriteAddress, (u16)(tmp >> 16));
-               WriteAddress += WriteAdd;
-               MappedMemoryWriteWord(WriteAddress, (u16)tmp);
+               MappedMemoryWriteWord(WriteAddress+2, (u16)tmp);
                WriteAddress += WriteAdd;
                ReadAddress += ReadAdd;
                counter += 4;
@@ -759,6 +784,8 @@ void dsp_dma01(scudspregs_struct *sc, u32 inst)
     sc->ProgControlPort.part.T0 = 0;
 }
 
+extern u8 * HighWram;
+
 void dsp_dma_write_d0bus(scudspregs_struct *sc, int sel, int add, int count){
 
   int i;
@@ -806,7 +833,7 @@ void dsp_dma_write_d0bus(scudspregs_struct *sc, int sel, int add, int count){
         {
           u32 Val = sc->MD[sel][sc->CT[sel] & 0x3F];
           Adr = (sc->WA0 << 2);
-          MappedMemoryWriteLong(Adr, Val);
+          T2WriteLong(HighWram, Adr & 0xFFFFC, Val);
           sc->CT[sel]++;
           sc->CT[sel] &= 0x3F;
           sc->WA0 += 1;
@@ -818,7 +845,7 @@ void dsp_dma_write_d0bus(scudspregs_struct *sc, int sel, int add, int count){
         {
           u32 Val = sc->MD[sel][sc->CT[sel] & 0x3F];
           Adr = (sc->WA0 << 2);
-          MappedMemoryWriteLong(Adr, Val);
+          T2WriteLong(HighWram, Adr & 0xFFFFC, Val);
           sc->CT[sel]++;
           sc->CT[sel] &= 0x3F;
           sc->WA0 += (add >> 1);
@@ -1015,20 +1042,32 @@ void dsp_dma08(scudspregs_struct *sc, u32 inst)
     sc->WA0 = saveWa0;
 }
 
+INLINE void ScuTimer1Exec( u32 timing ) {
+  if (ScuRegs->timer1_counter > 0) {
+    ScuRegs->timer1_counter = (ScuRegs->timer1_counter - (timing >> 1));
+    if (ScuRegs->timer1_counter <= 0) {
+      ScuRegs->timer1_set = 1;
+      if ((ScuRegs->T1MD & 0x80) == 0) {
+        ScuSendTimer1();
+      }
+      else if (ScuRegs->timer0_set == 1) {
+        ScuSendTimer1();
+      }
+    }
+  }
+}
+
 //////////////////////////////////////////////////////////////////////////////
 void ScuExec(u32 timing) {
    int i;
 
    if ( ScuRegs->T1MD & 0x1 ){
-     if (ScuRegs->timer1_counter > 0) {
-       ScuRegs->timer1_counter = (ScuRegs->timer1_counter - (timing >> 1));
-       if (ScuRegs->timer1_counter <= 0) {
-         ScuRegs->timer1_set = 1;
-         if ((ScuRegs->T1MD & 0x80) == 0) {
-             ScuSendTimer1();
-         }else if (ScuRegs->timer0_set == 1) {
-             ScuSendTimer1();
-         }
+     if (ScuRegs->T1MD & 0x80 == 0) {
+       ScuTimer1Exec(timing);
+     }
+     else {
+       if (yabsys.LineCount == ScuRegs->T0C) {
+         ScuTimer1Exec(timing);
        }
      }
    }
@@ -1073,7 +1112,8 @@ void ScuExec(u32 timing) {
        fprintf(slogp, "*********************************************\n");
      }
 #endif
-      while (timing > 0) {
+     s32 dsp_counter = (s32)timing;
+      while (dsp_counter > 0) {
          u32 instruction;
 
          // Make sure it isn't one of our breakpoints
@@ -1609,7 +1649,7 @@ void ScuExec(u32 timing) {
 
                      LOG("dsp has ended\n");
                      ScuDsp->ProgControlPort.part.P = ScuDsp->PC+1;
-                     timing = 1;
+                     dsp_counter = 1;
                      break;
                   default: break;
                }
@@ -1636,12 +1676,12 @@ void ScuExec(u32 timing) {
             {
                ScuDsp->PC = (unsigned char)ScuDsp->jmpaddr;
                ScuDsp->jmpaddr = 0xFFFFFFFF;
+               dsp_counter += 1; // hold clock
             }
             else
                ScuDsp->delayed = 1;
          }
-
-         timing--;
+         dsp_counter--;
       }
    }
 }
@@ -2403,6 +2443,7 @@ u32 FASTCALL ScuReadLong(u32 addr) {
          else
             return 0;
       case 0xA4:
+         //LOG("Read IST %08X", ScuRegs->IST);
          return ScuRegs->IST;
       case 0xA8:
          return ScuRegs->AIACK;
@@ -2422,7 +2463,12 @@ void FASTCALL ScuWriteByte(u32 addr, u8 val) {
    addr &= 0xFF;
    switch(addr) {
       case 0xA7:
-         ScuRegs->IST &= (0xFFFFFF00 | val); // double check this
+      {
+        u32 after = ScuRegs->IST & (0xFFFFFF00 | val);
+        ScuRemoveInterruptByCPU(ScuRegs->IST, after);
+        ScuRegs->IST = after; // double check this
+        ScuTestInterruptMask();
+      }
          return;
       default:
          LOG("Unhandled SCU Register byte write %08X\n", addr);
@@ -2595,12 +2641,16 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          break;
       case 0xA0:
          ScuRegs->IMS = val;
-         //LOG("scu\t: IMS = %X", val);
+         //LOG("scu\t: IMS = %X PC=%X frame=%d:%d", val, CurrentSH2->regs.PC, yabsys.frame_count,yabsys.LineCount);
          ScuTestInterruptMask();
          break;
-      case 0xA4:
-         ScuRegs->IST &= val;
-         ScuTestInterruptMask();
+      case 0xA4: {
+        u32 after = ScuRegs->IST & val;
+        ScuRemoveInterruptByCPU(ScuRegs->IST, after);
+        ScuRegs->IST = after;
+        //LOG("scu\t: IST = %X PC=%X frame=%d:%d", val, CurrentSH2->regs.PC, yabsys.frame_count, yabsys.LineCount);
+        ScuTestInterruptMask();
+      }
          break;
       case 0xA8:
          ScuRegs->AIACK = val;
@@ -2625,6 +2675,32 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+void ScuRemoveInterruptByCPU(u32 pre, u32 after) {
+  for (int i = 0; i < 16; i++) {
+    if (((pre >> i) & 0x01) && ((after >> i) & 0x01 == 0)) {
+      u32 ii, i2;
+      int hit = -1;
+      for (ii = 0; ii < ScuRegs->NumberOfInterrupts; ii++) {
+        if (ScuRegs->interrupts[i].statusbit == (1<<i)) {
+          hit = ii;
+          LOG("%s(%0X) is removed at frame %d:%d", ScuGetVectorString(ScuRegs->interrupts[i].vector), ScuRegs->interrupts[i].vector, yabsys.frame_count, yabsys.LineCount);
+          break;
+        }
+      }
+      if (hit != -1) {
+        i2 = 0;
+        for (ii = 0; ii < ScuRegs->NumberOfInterrupts; ii++) {
+          if (ii != hit) {
+            memcpy(&ScuRegs->interrupts[i2], &ScuRegs->interrupts[ii], sizeof(scuinterrupt_struct));
+            i2++;
+          }
+        }
+        ScuRegs->NumberOfInterrupts--;
+      }
+    }
+  }
+}
 
 void ScuTestInterruptMask()
 {
@@ -2652,48 +2728,32 @@ void ScuTestInterruptMask()
          }
        }
      }else if (!(ScuRegs->IMS & mask)) {
-         SH2SendInterrupt(MSH2, ScuRegs->interrupts[ScuRegs->NumberOfInterrupts-1-i].vector, ScuRegs->interrupts[ScuRegs->NumberOfInterrupts-1-i].level);
-         ScuRegs->IST &= ~ScuRegs->interrupts[ScuRegs->NumberOfInterrupts-1-i].statusbit;
+
+       // removed manually
+       if ( (ScuRegs->IST & ScuRegs->interrupts[ScuRegs->NumberOfInterrupts - 1 - i].statusbit) == 0) {
+
+         //LOG("removed");
+
+       }
+       else {
+         u8 vector = ScuRegs->interrupts[ScuRegs->NumberOfInterrupts - 1 - i].vector;
+         LOG("%s(%0X) delay at frame %d:%d", ScuGetVectorString(vector), vector, yabsys.frame_count, yabsys.LineCount);
+
+         SH2SendInterrupt(MSH2, ScuRegs->interrupts[ScuRegs->NumberOfInterrupts - 1 - i].vector, ScuRegs->interrupts[ScuRegs->NumberOfInterrupts - 1 - i].level);
+         ScuRegs->IST &= ~ScuRegs->interrupts[ScuRegs->NumberOfInterrupts - 1 - i].statusbit;
 
          // Shorten list
-         for (i2 = ScuRegs->NumberOfInterrupts-1-i; i2 < (ScuRegs->NumberOfInterrupts-1); i2++)
-            memcpy(&ScuRegs->interrupts[i2], &ScuRegs->interrupts[i2+1], sizeof(scuinterrupt_struct));
+         for (i2 = ScuRegs->NumberOfInterrupts - 1 - i; i2 < (ScuRegs->NumberOfInterrupts - 1); i2++)
+           memcpy(&ScuRegs->interrupts[i2], &ScuRegs->interrupts[i2 + 1], sizeof(scuinterrupt_struct));
 
          ScuRegs->NumberOfInterrupts--;
          break;
+       }
       }
    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-void ScuRemoveInterrupt(u8 vector, u8 level) {
-  u32 i, i2;
-  interrupt_struct tmp;
-  int hit = -1;
-
-  for (i = 0; i < ScuRegs->NumberOfInterrupts; i++) {
-    if (ScuRegs->interrupts[i].vector == vector) {
-      ScuRegs->interrupts[i].level = 0;
-      ScuRegs->interrupts[i].vector = 0;
-      hit = i;
-      break;
-    }
-  }
-
-  if (hit != -1) {
-    i2 = 0;
-    for (i = 0; i < ScuRegs->NumberOfInterrupts; i++) {
-      if (i != hit) {
-        ScuRegs->interrupts[i2].level = ScuRegs->interrupts[i].level;
-        ScuRegs->interrupts[i2].vector = ScuRegs->interrupts[i].vector;
-        i2++;
-      }
-    }
-    ScuRegs->NumberOfInterrupts--;
-  }
-}
-
 static void ScuQueueInterrupt(u8 vector, u8 level, u16 mask, u32 statusbit)
 {
    u32 i, i2;
@@ -2741,10 +2801,17 @@ static INLINE void SendInterrupt(u8 vector, u8 level, u16 mask, u32 statusbit) {
     }
   }else if (!(ScuRegs->IMS & mask)){
     //if (vector != 0x41) LOG("INT %d", vector);
+    //LOG("%s(%x) at frame %d:%d", ScuGetVectorString(vector), vector, yabsys.frame_count, yabsys.LineCount);
     SH2SendInterrupt(MSH2, vector, level);
+    if (yabsys.IsSSH2Running) {
+      if (vector == 0x41 || vector == 0x42 || vector == 0x43) {
+          SH2SendInterrupt(SSH2, vector, level);
+      }
+    }
   }
   else
    {
+      //LOG("%s(%x) is Queued %d:%d", ScuGetVectorString(vector), vector, yabsys.frame_count, yabsys.LineCount);
       ScuQueueInterrupt(vector, level, mask, statusbit);
       ScuRegs->IST |= statusbit;
    }
@@ -2788,29 +2855,68 @@ static INLINE void ScuChekIntrruptDMA(int id){
   }
 }
 
+void ScuRemoveInterrupt(u8 vector, u8 level); 
 void ScuRemoveVBlankOut();
 void ScuRemoveHBlankIN();
 void ScuRemoveVBlankIN();
 void ScuRemoveTimer0();
 void ScuRemoveTimer1();
 
+
+const char * ScuGetVectorString(u32 vec) {
+  switch (vec) {
+  case 0x40:
+    return "VBlankIN";
+    break;
+  case 0x41:
+    return "VBlankOUT";
+    break;
+  case 0x42:
+    return "HBlankIN";
+    break;
+  case 0x43:
+    return "Timer0";
+    break;
+  case 0x44:
+    return "Timer1";
+    break;
+  case 0x45:
+    return "DSP End";
+    break;
+  case 0x47:
+    return "SmpcINTBACK";
+    break;
+  case 0x49:
+    return "DMA2 End";
+  case 0x4A:
+    return "DMA1 End";
+  case 0x4B:
+    return "DMA0 End";
+  case 0x4d:
+    return "DrawEnd";
+    break;
+
+  }
+  return "Unknown";
+}
 //////////////////////////////////////////////////////////////////////////////
 
 void ScuSendVBlankIN(void) {
-   ScuRemoveVBlankOut();
+   //ScuRemoveVBlankOut();
+   //ScuRemoveHBlankIN();
    SendInterrupt(0x40, 0xF, 0x0001, 0x0001);
    ScuChekIntrruptDMA(0);
 }
 
 void ScuRemoveVBlankIN() {
-  ScuRemoveInterrupt(0x40, 0x0F);
-  SH2RemoveInterrupt(MSH2, 0x40, 0x0F);
+  //ScuRemoveInterrupt(0x40, 0x0F);
+  //SH2RemoveInterrupt(MSH2, 0x40, 0x0F);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void ScuSendVBlankOUT(void) {
-   ScuRemoveVBlankIN();
+   //ScuRemoveVBlankIN();
    SendInterrupt(0x41, 0xE, 0x0002, 0x0002);
    ScuRegs->timer0 = 0;
    if (ScuRegs->T1MD & 0x1)
@@ -2821,26 +2927,27 @@ void ScuSendVBlankOUT(void) {
      }
      else {
        ScuRegs->timer0_set = 0;
-       ScuRemoveTimer0();
+       //ScuRemoveTimer0();
      }
    }
    ScuChekIntrruptDMA(1);
 }
 
 void ScuRemoveVBlankOut() {
-  ScuRemoveInterrupt(0x41, 0x0E);
-  SH2RemoveInterrupt(MSH2, 0x41, 0x0E);
+  //ScuRemoveInterrupt(0x41, 0x0E);
+  //SH2RemoveInterrupt(MSH2, 0x41, 0x0E);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void ScuRemoveHBlankIN() {
-  ScuRemoveInterrupt(0x42, 0x0D);
-  SH2RemoveInterrupt(MSH2, 0x42, 0x0D);
+  //ScuRemoveInterrupt(0x42, 0x0D);
+  //SH2RemoveInterrupt(MSH2, 0x42, 0x0D);
 }
 
 
 void ScuSendHBlankIN(void) {
+   //if(yabsys.LineCount == 0) ScuRemoveVBlankOut();
    SendInterrupt(0x42, 0xD, 0x0004, 0x0004);
    ScuRegs->timer0++;
    if (ScuRegs->T1MD & 0x1)
@@ -2852,13 +2959,13 @@ void ScuSendHBlankIN(void) {
      }
      else {
        ScuRegs->timer0_set = 0;
-       ScuRemoveTimer0();
+       //ScuRemoveTimer0();
      }
 
      if (ScuRegs->timer1_set == 1) {
         ScuRegs->timer1_set = 0;
         ScuRegs->timer1_counter = ScuRegs->timer1_preset;
-        ScuRemoveTimer1();
+        //ScuRemoveTimer1();
       }
    }
    ScuChekIntrruptDMA(2);
@@ -2879,14 +2986,14 @@ void ScuSendTimer1(void) {
 }
 
 void ScuRemoveTimer0(void) {
-  ScuRemoveInterrupt(0x43, 0x0C);
-  SH2RemoveInterrupt(MSH2, 0x43, 0x0C);
+  //ScuRemoveInterrupt(0x43, 0x0C);
+  //SH2RemoveInterrupt(MSH2, 0x43, 0x0C);
 }
 
 
 void ScuRemoveTimer1(void) {
-  ScuRemoveInterrupt(0x44, 0x0B);
-  SH2RemoveInterrupt(MSH2, 0x44, 0xB);
+  //ScuRemoveInterrupt(0x44, 0x0B);
+  //SH2RemoveInterrupt(MSH2, 0x44, 0xB);
 }
 
 //////////////////////////////////////////////////////////////////////////////

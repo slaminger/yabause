@@ -18,6 +18,25 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
 
 /*! \file yabause.c
     \brief Yabause main emulation functions and interface for the ports
@@ -238,6 +257,9 @@ int YabauseInit(yabauseinit_struct *init)
 
    MappedMemoryInit();
 
+   VideoSetSetting(VDP_SETTING_RBG_USE_COMPUTESHADER, init->rbg_use_compute_shader);
+   VideoSetSetting(VDP_SETTING_RBG_RESOLUTION_MODE, init->rbg_resolution_mode);
+
    if (VideoInit(init->vidcoretype) != 0)
    {
       YabSetError(YAB_ERR_CANNOTINIT, _("Video"));
@@ -249,6 +271,8 @@ int YabauseInit(yabauseinit_struct *init)
    VideoSetSetting(VDP_SETTING_POLYGON_MODE, init->polygon_generation_mode);
    VideoSetSetting(VDP_SETTING_RESOLUTION_MODE, init->resolution_mode);
    VideoSetSetting(VDP_SETTING_ROTATE_SCREEN, init->rotate_screen);
+   VideoSetSetting(VDP_SETTING_RBG_USE_COMPUTESHADER, init->rbg_use_compute_shader);
+   VideoSetSetting(VDP_SETTING_RBG_RESOLUTION_MODE, init->rbg_resolution_mode);
 
 
    // Initialize input core
@@ -329,8 +353,10 @@ int YabauseInit(yabauseinit_struct *init)
       }
       yabsys.emulatebios = 0;
    }
-   else
-      yabsys.emulatebios = 1;
+   else {
+     yabsys.emulatebios = 1;
+     T2WriteLong(BiosRom, 0x04, 0x06002000); // set base stack pointer
+   }
 
    yabsys.usequickload = 0;
 
@@ -860,6 +886,9 @@ void SyncCPUtoSCSP() {
 //////////////////////////////////////////////////////////////////////////////
 
 void YabauseStartSlave(void) {
+
+  LOG("YabauseStartSlave");
+
    if (yabsys.emulatebios)
    {
       CurrentSH2 = SSH2;
@@ -888,7 +917,10 @@ void YabauseStartSlave(void) {
       SSH2->regs.PC = MappedMemoryReadLong(0x06000250);
       if (MappedMemoryReadLong(0x060002AC) != 0)
          SSH2->regs.R[15] = MappedMemoryReadLong(0x060002AC);
+
+      SSH2->regs.SR.part.I = 0;
       SH2SetRegisters(SSH2, &SSH2->regs);
+      SH2HandleInterrupts(SSH2);
    }
    else {
      SH2PowerOn(SSH2);
@@ -1040,6 +1072,7 @@ void YabauseSpeedySetup(void)
    MSH2->regs.MACH = 0x00000000;
    MSH2->regs.MACL = 0x00000000;
    MSH2->regs.PR = 0x00000000;
+   MSH2->onchip.TIER = 0x81;
    SH2SetRegisters(MSH2, &MSH2->regs);
 
    // Set SCU registers to sane states
@@ -1105,6 +1138,7 @@ int YabauseQuickLoadGame(void)
 
    Cs2Area->outconcddev = Cs2Area->filter + 0;
    Cs2Area->outconcddevnum = 0;
+   Cs2Area->cdi->ReadTOC(Cs2Area->TOC);
 
    // read in lba 0/FAD 150
    if ((lgpartition = Cs2ReadUnFilteredSector(150)) == NULL)
@@ -1126,6 +1160,9 @@ int YabauseQuickLoadGame(void)
       if ((size % 2048) != 0) 
          blocks++;
 
+      // Lastbronx for 0x8000
+      size = 16 * 2048;
+      blocks = 16;
 
       // Figure out where to load the first program
       addr = (buffer[0xF0] << 24) |

@@ -20,6 +20,25 @@
  * along with Yabause; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
 
 /*! \file scsp.c
     \brief SCSP emulation functions.
@@ -4962,8 +4981,11 @@ SoundRamReadLong (u32 addr)
   // If mem4b is set, mirror ram every 256k
   if (scsp.mem4b == 0)
     addr &= 0x3FFFF;
-  else if (addr > 0x7FFFF)
+  else if (addr > 0x7FFFF) {
     val = 0xFFFFFFFF;
+    SyncSh2And68k();
+    return val;
+  }
 
   SyncSh2And68k();
 
@@ -5146,6 +5168,7 @@ ScspChangeSoundCore (int coreid)
 void
 ScspDeInit (void)
 {
+  ScspUnMuteAudio(1);
   scsp_mute_flags = 0;
   thread_running = 0; 
 #if defined(ASYNC_SCSP)
@@ -5495,7 +5518,7 @@ void ScspAsynMainCpuTime( void * p ){
   now = 0;
   before = 0;
   while (thread_running){
-    while (g_scsp_lock) { YabThreadUSleep(1); }
+    while (g_scsp_lock) { YabThreadUSleep(1000); }
     u64 m68k_done_counter = 0;
     u64 m68k_integer_part = 0;
     u64 m68k_cycle = 0;
@@ -5587,7 +5610,7 @@ void ScspAsynMainRealtime(void * p) {
   now = 0;
   before = 0;
   while (thread_running) {
-    while (g_scsp_lock) { YabThreadUSleep(1); }
+    while (g_scsp_lock) { YabThreadUSleep(1000); }
     // Run 1 sample(44100Hz)
     for (i = 0; i < samplecnt; i += step) {
       MM68KExec(step);
@@ -5637,7 +5660,7 @@ void ScspAsynMainRealtime(void * p) {
           initbefore = before;
         }
         if( sleeptime < 0 ) break;
-#if 0 //defined(ANDROID)
+#if defined(ANDROID)
         //tm.tv_sec = 0;
         //tm.tv_nsec = sleeptime;
 
@@ -5875,6 +5898,8 @@ ScspMuteAudio (int flags)
   scsp_mute_flags |= flags;
   if (SNDCore && scsp_mute_flags)
     SNDCore->MuteAudio ();
+
+  g_scsp_lock = 1;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -5885,6 +5910,8 @@ ScspUnMuteAudio (int flags)
   scsp_mute_flags &= ~flags;
   if (SNDCore && (scsp_mute_flags == 0))
     SNDCore->UnMuteAudio ();
+
+  g_scsp_lock = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -6624,6 +6651,14 @@ SoundLoadState (FILE *fp, int version, int size)
 
     yread(&check, (void *)&ScspInternalVars->scsptiming1, sizeof(u32), 1, fp);
     yread(&check, (void *)&ScspInternalVars->scsptiming2, sizeof(u32), 1, fp);
+
+    if (version >= 3) {
+      yread(&check, (void *)&cdda_next_in, sizeof(u32), 1, fp);
+      yread(&check, (void *)&cdda_out_left, sizeof(u32), 1, fp);
+      yread(&check, (void *)&scsp_mute_flags, sizeof(u32), 1, fp);
+      yread(&check, (void *)&scspsoundlen, sizeof(u32), 1, fp);
+      yread(&check, (void *)&scsplines, sizeof(u32), 1, fp);
+    }
 
     if (version >= 3) {
       yread(&check, (void *)&cdda_next_in, sizeof(u32), 1, fp);

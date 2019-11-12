@@ -1,18 +1,19 @@
-/*  Copyright 2018 devMiyax(smiyaxdev@gmail.com)
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
 
 This file is part of YabaSanshiro.
 
-Yabause is free software; you can redistribute it and/or modify
+        YabaSanshiro is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
 
-Yabause is distributed in the hope that it will be useful,
+YabaSanshiro is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
+        You should have received a copy of the GNU General Public License
 along with YabaSanshiro; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
@@ -25,6 +26,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem ;
 
 #include <sys/resource.h>
 #include <errno.h>
@@ -59,6 +62,12 @@ extern "C" {
 
 #include "InputManager.h"
 #include "MenuScreen.h"
+#include "Preference.h"
+
+#define YUI_LOG printf
+
+static char last_state_filename[256] = "\0";
+char s_savepath[256] ="\0";
 
 extern "C" {
 static char biospath[256] = "/home/pigaming/RetroPie/BIOS/saturn/bios.bin";
@@ -68,6 +77,7 @@ static char cdpath[256] = ""; ///home/pigaming/RetroPie/roms/saturn/nights.cue";
 static char buppath[256] = "./back.bin";
 static char mpegpath[256] = "\0";
 static char cartpath[256] = "\0";
+static bool menu_show = false;
 
 #define LOG printf
 
@@ -149,6 +159,8 @@ MenuScreen * menu;
 using std::string;
 string g_keymap_filename;
 
+void hideMenuScreen();
+
 //----------------------------------------------------------------------------------------------
 NVGcontext * getGlobalNanoVGContext(){
   return menu->nvgContext();
@@ -192,6 +204,8 @@ int yabauseinit()
   int res;
   yabauseinit_struct yinit = {};
 
+  Preference pre( cdpath );
+
   yinit.m68kcoretype = M68KCORE_MUSASHI;
   yinit.percoretype = PERCORE_DUMMY;
 #if defined(__PC__)
@@ -221,17 +235,27 @@ int yabauseinit()
   yinit.usethreads = 0;
   yinit.skip_load = 0;    
   yinit.video_filter_type = 0;
-#if defined(__SWITCH__)  
+#if defined(__SWITCH__)  || defined(__JETSON__)
   yinit.polygon_generation_mode = GPU_TESSERATION;
 #else
   yinit.polygon_generation_mode = PERSPECTIVE_CORRECTION;
 #endif  
   yinit.use_new_scsp = 1;
-  yinit.resolution_mode = g_resolution_mode;
-  yinit.rotate_screen = 0;
+  yinit.resolution_mode = pre.getInt( "Resolution" ,g_resolution_mode);
+  yinit.rotate_screen = pre.getBool( "Rotate screen" , false );
   yinit.scsp_sync_count_per_frame = g_scsp_sync;
   yinit.extend_backup = 1;
+#if defined(__JETSON__)  
   yinit.scsp_main_mode = 1;
+#else
+  yinit.scsp_main_mode = 0;
+#endif
+  yinit.rbg_resolution_mode = pre.getInt( "Rotate screen resolution" ,0);
+#if defined(__JETSON__) || defined(__SWITCH__)
+  yinit.rbg_use_compute_shader = pre.getBool( "Use compute shader" , true);
+#else
+  yinit.rbg_use_compute_shader = pre.getBool( "Use compute shader" , false);
+#endif
 
   res = YabauseInit(&yinit);
   if( res == -1) {
@@ -263,7 +287,7 @@ int main(int argc, char** argv)
   }  
   std::string bckup_dir = home_dir + "backup.bin";
   strcpy( buppath, bckup_dir.c_str() );
-
+  strcpy( s_savepath, home_dir.c_str() );
   g_keymap_filename = home_dir + "keymapv2.json";
 
   std::string current_exec_name = argv[0]; // Name of the current exec program
@@ -325,6 +349,7 @@ int main(int argc, char** argv)
   SDL_GL_SetSwapInterval(0);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+  SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
 #if defined(__PC__)
   int width = 1280;
@@ -357,41 +382,21 @@ int main(int argc, char** argv)
   printf("Extentions: %s\n",glGetString(GL_EXTENSIONS));
 
   inputmng->init(g_keymap_filename);
-  menu = new MenuScreen(wnd,width,height, g_keymap_filename);
+  menu = new MenuScreen(wnd,width,height, g_keymap_filename, cdpath);
   menu->setConfigFile(g_keymap_filename);  
+  menu->setCurrentGamePath(cdpath);
 
   if( yabauseinit() == -1 ) {
       printf("Fail to yabauseinit Bye! (%s)", SDL_GetError() );
       return -1;
   }
 
-  if( g_keep_aspect_rate ){
-    int originx = 0;
-    int originy = 0;
-    int specw = width;
-    int spech = height;
-    float specratio = (float)specw / (float)spech;
-    int saturnw = 4;
-    int saturnh = 3;
-    float saturnraito = (float)saturnw/ (float)saturnh;
-    float revraito = (float) saturnh/ (float)saturnw;
-    if( specratio > saturnraito ){
-            width = spech * saturnraito;
-            height = spech;
-            originx = (dsp.w - width)/2.0;
-            originy = 0;
-    }else{
-        width = specw ;
-        height = specw * revraito;
-        originx = 0;
-        originy = spech - height;
-    }
-    VIDCore->Resize(originx,originy,width,height,0);
-  }else{
-    VIDCore->Resize(0,0,width,height,0);
-  }
+  Preference * p = new Preference(cdpath);
+  VIDCore->Resize(0,0,width,height,1,p->getInt("Aspect rate",0));
+  delete p;
+  
   SDL_GL_MakeCurrent(wnd,nullptr);
-#if defined(__RP64__)
+#if defined(__RP64__) || defined(__N2__)
   YabThreadSetCurrentThreadAffinityMask(0x4);
 #else
   YabThreadSetCurrentThreadAffinityMask(0x0);
@@ -420,8 +425,12 @@ int main(int argc, char** argv)
   Uint32  evCloseTray = SDL_RegisterEvents(1);
   menu->setCloseTrayMenuEventCode(evCloseTray);
 
+  Uint32  evSaveState = SDL_RegisterEvents(1);
+  menu->setSaveStateEventCode(evSaveState);
 
-  bool menu_show = false;
+  Uint32  evLoadState = SDL_RegisterEvents(1);
+  menu->setLoadStateEventCode(evLoadState);
+
   std::string tmpfilename = home_dir + "tmp.png";
 
   struct sched_param thread_param;
@@ -431,9 +440,12 @@ int main(int argc, char** argv)
   }
   setpriority( PRIO_PROCESS, 0, -8);
   int frame_cont = 0;
+  int event_count = 0;
   while(true) {
     SDL_Event e;
+    event_count = 0;
     while(SDL_PollEvent(&e)) {
+      event_count++;
       if(e.type == SDL_QUIT){
         glClearColor(0.0,0.0,0.0,1.0);
         glClear(GL_COLOR_BUFFER_BIT);        
@@ -447,15 +459,19 @@ int main(int argc, char** argv)
       }
       else if(e.type == evToggleMenu){
         if( menu_show ){
-          menu_show = false;
-          inputmng->setMenuLayer(nullptr);
-          SDL_GL_MakeCurrent(wnd,nullptr);
-          VdpResume();
-          SNDSDL.UnMuteAudio();          
+            Preference * p = new Preference(cdpath);
+            VIDCore->Resize(0,0,width,height,1,p->getInt("Aspect rate",0));
+            delete p;
+          hideMenuScreen();           
         }else{
           menu_show = true;
-          SNDSDL.MuteAudio();
+          ScspMuteAudio(1);
           VdpRevoke();
+
+          char pngname_base[256];
+          snprintf(pngname_base,256,"%s/%s_", s_savepath, cdip->itemnum);
+          menu->setCurrentGameId(pngname_base);
+
           inputmng->setMenuLayer(menu);
           SDL_GL_MakeCurrent(wnd,glc);
           saveScreenshot(tmpfilename.c_str());
@@ -476,11 +492,7 @@ int main(int argc, char** argv)
 
       else if(e.type == evResetMenu){
         YabauseReset();
-        menu_show = false;
-        inputmng->setMenuLayer(nullptr);
-        SDL_GL_MakeCurrent(wnd,nullptr);
-        VdpResume();
-        SNDSDL.UnMuteAudio(); 
+        hideMenuScreen(); 
       }
 
       else if(e.type == evPadMenu ){
@@ -489,12 +501,7 @@ int main(int argc, char** argv)
         }else{
           padmode = 0;
         }
-        inputmng->setGamePadomode( 0, padmode );
-        menu_show = false;
-        inputmng->setMenuLayer(nullptr);
-        SDL_GL_MakeCurrent(wnd,nullptr);
-        VdpResume();
-        SNDSDL.UnMuteAudio();         
+        hideMenuScreen();         
       }
 
       else if(e.type == evToggleFps ){
@@ -503,11 +510,7 @@ int main(int argc, char** argv)
         }else{
           g_EnagleFPS = 0;
         }
-        menu_show = false;
-        inputmng->setMenuLayer(nullptr);
-        SDL_GL_MakeCurrent(wnd,nullptr);
-        VdpResume();
-        SNDSDL.UnMuteAudio();         
+        hideMenuScreen();         
       }
 
       else if(e.type == evToggleFrameSkip ){
@@ -518,22 +521,14 @@ int main(int argc, char** argv)
           g_frame_skip = 0;
           DisableAutoFrameSkip();
         }
-        menu_show = false;
-        inputmng->setMenuLayer(nullptr);
-        SDL_GL_MakeCurrent(wnd,nullptr);
-        VdpResume();
-        SNDSDL.UnMuteAudio();         
+        hideMenuScreen();         
       }
       else if(e.type == evOpenTray ){
         menu->setCurrentGamePath(cdpath);
         Cs2ForceOpenTray();
         if( !g_emulated_bios ) {
-        menu_show = false;
-        inputmng->setMenuLayer(nullptr);
-        SDL_GL_MakeCurrent(wnd,nullptr);
-        VdpResume();
-        SNDSDL.UnMuteAudio();         
-      }
+          hideMenuScreen();            
+        }
       }
       else if(e.type == evCloseTray ){
         if( e.user.data1 != nullptr ){
@@ -541,11 +536,50 @@ int main(int argc, char** argv)
           free(e.user.data1);
         }
         Cs2ForceCloseTray(CDCORE_ISO, cdpath );
-        menu_show = false;
-        inputmng->setMenuLayer(nullptr);
-        SDL_GL_MakeCurrent(wnd,nullptr);
-        VdpResume();
-        SNDSDL.UnMuteAudio();         
+        hideMenuScreen();     
+      }
+
+      else if(e.type == evSaveState ){
+
+        int ret;
+        time_t t = time(NULL);
+        YUI_LOG("MSG_SAVE_STATE");
+
+        snprintf(last_state_filename, 256, "%s/%s_%d.yss", s_savepath, cdip->itemnum, e.user.code);
+        ret = YabSaveState(last_state_filename);
+        if( ret == 0 ){
+          char pngname[256];
+          snprintf(pngname,256,"%s/%s_%d.png", s_savepath, cdip->itemnum, e.user.code);
+          fs::copy(tmpfilename, pngname, fs::copy_options::overwrite_existing );
+        }
+        hideMenuScreen();
+      }
+
+      else if(e.type == evLoadState ){
+        int rtn;
+        YUI_LOG("MSG_LOAD_STATE");
+
+        // Find latest filename
+        sprintf(last_state_filename, "%s/%s_%d.yss", s_savepath, cdip->itemnum, e.user.code);
+        rtn = YabLoadState(last_state_filename);
+        switch(rtn){
+          case 0:
+          YUI_LOG("Load State: OK");
+          break;
+        case -1:
+          YUI_LOG("Load State: File Not Found");
+          break;
+        case -2:
+          YUI_LOG("Load State: Bad format");
+           break;
+        case -3:
+          YUI_LOG("Load State: Bad format deep inside");
+          break;                    
+        default:
+          YUI_LOG("Load State: Fail unkown");
+          break;                    
+        }
+        hideMenuScreen();
       }
 
       inputmng->parseEvent(e);
@@ -556,10 +590,15 @@ int main(int argc, char** argv)
     inputmng->handleJoyEvents();
 
     if( menu_show ){
-      glClearColor(0.0f, 0.0f, 0.0f, 1);
-      glClear(GL_COLOR_BUFFER_BIT);
-      menu->drawAll();
-      SDL_GL_SwapWindow(wnd);
+
+      if( event_count > 0 ){
+        glClearColor(0.0f, 0.0f, 0.0f, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        menu->drawAll();
+        SDL_GL_SwapWindow(wnd);
+      }else{
+        usleep( 16*1000 );
+      }
     }else{
       //printf("\033[%d;%dH Frmae = %d \n", 0, 0, frame_cont);
       //frame_cont++;
@@ -571,7 +610,19 @@ int main(int argc, char** argv)
   return 0;
 }
 
-#define YUI_LOG printf
+void hideMenuScreen(){
+  menu_show = false;
+  inputmng->setMenuLayer(nullptr);
+  glClearColor(0.0f, 0.0f, 0.0f, 1);
+  glClear(GL_COLOR_BUFFER_BIT);
+  SDL_GL_SwapWindow(wnd);          
+  glClear(GL_COLOR_BUFFER_BIT);
+  SDL_GL_SwapWindow(wnd);          
+  SDL_GL_MakeCurrent(wnd,nullptr);
+  VdpResume();
+  ScspUnMuteAudio(1); 
+}
+
 int saveScreenshot( const char * filename ){
     
     int width;

@@ -1,3 +1,23 @@
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
+
 #include "InputManager.h"
 #include "InputConfig.h"
 //#include "Settings.h"
@@ -94,10 +114,18 @@ uint32_t genid( int user, int joyId, const Input & result ){
 
 uint32_t genidjson( int user, int joyId, const json & result ){
 
-  PADLOG("Keymap: user %d, joyid %d, type %s, id %d\n", 0, joyId, result["type"].get<string>().c_str(), result["id"].get<int>());
+  PADLOG("Keymap: user %d, joyid %d, type %s, id %d, val %d\n", 0, joyId, 
+  result["type"].get<string>().c_str(), 
+  result["id"].get<int>(),
+  result["value"].get<int>()
+  );
 
   if( result["type"] == "axis" ){
-    return MAKE_PAD(0,((joyId << 18)|SDL_MEDIUM_AXIS_VALUE|result["id"].get<int>() ));
+    if( result["value"].get<int>() < 0 ){
+      return MAKE_PAD(0,((joyId << 18)|SDL_MIN_AXIS_VALUE|result["id"].get<int>() ));      
+    }else{
+      return MAKE_PAD(0,((joyId << 18)|SDL_MAX_AXIS_VALUE|result["id"].get<int>() ));
+    }
   }else if( result["type"] == "hat" ){
     return MAKE_PAD(0, (joyId << 18) | SDL_HAT_VALUE | ( (result["value"].get<int>()) <<4));
   }else if( result["type"] == "key" ){
@@ -106,6 +134,14 @@ uint32_t genidjson( int user, int joyId, const json & result ){
   return MAKE_PAD(0,((joyId << 18)|result["id"].get<int>()));
 }
 
+uint32_t genidAnalogjson( int user, int joyId, const json & result ){
+  PADLOG("Keymap: user %d, joyid %d, type %s, id %d, val %d\n", 0, joyId, 
+  result["type"].get<string>().c_str(), 
+  result["id"].get<int>(),
+  result["value"].get<int>()
+  );
+  return MAKE_PAD(0,((joyId << 18)|SDL_MEDIUM_AXIS_VALUE|result["id"].get<int>() ));
+}
 
 int setPlayerKeys( void * padbits, int user, int joyId, const json & player ){
     if( player.find("up") != player.end()) PerSetKey(genidjson(user,joyId,player["up"]),PERPAD_UP, padbits);
@@ -127,8 +163,24 @@ int setPlayerKeys( void * padbits, int user, int joyId, const json & player ){
     PerSetKey(MAKE_PAD(0,((joyId << 18)|SDL_MEDIUM_AXIS_VALUE|SWITCH_LTRIGGER)), PERANALOG_AXIS3, padbits);
     PerSetKey(MAKE_PAD(0,((joyId << 18)|SDL_MEDIUM_AXIS_VALUE|SWITCH_RTRIGGER)), PERANALOG_AXIS4, padbits);
 #else
-    if( player.find("analogleft") != player.end()) PerSetKey(genidjson(user,joyId,player["analogleft"]), PERANALOG_AXIS3, padbits);
-    if( player.find("analogright") != player.end()) PerSetKey(genidjson(user,joyId,player["analogright"]), PERANALOG_AXIS4, padbits);  
+    if( player.find("analogx") != player.end())  {
+        PerSetKey(genidAnalogjson(user,joyId,player["analogx"]), PERANALOG_AXIS1, padbits);
+	InputManager::getInstance()->_analogType[joyId] = 0;
+    }
+    if( player.find("analogy") != player.end()) {
+        PerSetKey(genidAnalogjson(user,joyId,player["analogy"]), PERANALOG_AXIS2, padbits);
+        InputManager::getInstance()->_analogType[joyId] = 0; 
+    }
+    if( player.find("analogl") != player.end()) {
+        PerSetKey(genidAnalogjson(user,joyId,player["analogl"]), PERANALOG_AXIS4, padbits);
+	InputManager::getInstance()->_analogType[joyId] = 1;
+    }
+    if( player.find("analogr") != player.end()) {
+	PerSetKey(genidAnalogjson(user,joyId,player["analogr"]), PERANALOG_AXIS3, padbits);  
+	InputManager::getInstance()->_analogType[joyId] = 1; 
+    }
+
+
 #endif    
 }
 
@@ -580,7 +632,10 @@ void InputManager::init( const std::string & fname )
     MenuInput tmp;
     Input result;
     it->second->getInputByName("select", &result);
-    tmp.select_device_ = it->second->getDeviceId();
+    if( result.id == -1 ){
+      it->second->getInputByName("hotkeyenable", &result);
+    }
+    tmp.select_device_ = it->second->getDeviceId();    
     tmp.select_button_ = result.id;
     printf("select_device_ = %d, select_button_ = %d\n", tmp.select_device_, tmp.select_button_ );
     menu_inputs_.push_back(tmp);
@@ -715,7 +770,7 @@ int InputManager::handleJoyEventsMenu(void) {
 
   
   for( auto it = mJoysticks.begin(); it != mJoysticks.end() ; ++it ) {
-
+    
     SDL_Joystick* joy = it->second;
     SDL_JoystickID joyId = SDL_JoystickInstanceID(joy);
     char guid[65];
@@ -723,19 +778,35 @@ int InputManager::handleJoyEventsMenu(void) {
     SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(joy), guid, 65);
     InputManager::genJoyString( joy_name_and_guid, joyId, SDL_JoystickName(joy), guid );
 
+    auto pre_info = joymap_.find(joy_name_and_guid);
+    if( pre_info == joymap_.end() ){
+      joymap_[joy_name_and_guid] = new int[SDL_JoystickNumAxes(joy)];
+      for( i=0; i< SDL_JoystickNumAxes(joy); i++ ){
+          joymap_[joy_name_and_guid][i]=0x7FFFFFFF;
+      }
+    }
+     
     for ( i = 0; i < SDL_JoystickNumAxes( joy ); i++ )
     {
       cur = SDL_JoystickGetAxis( joy, i );
-      if ( cur < -SDL_MEDIUM_AXIS_VALUE )
-      {
-        //menu_layer_->onRawInputEvent(*this, guid, "analog", i, -1);
+
+      if( cur < -SDL_MEDIUM_AXIS_VALUE ){
+        cur = -1;
+      }else if( cur > SDL_MEDIUM_AXIS_VALUE ){
+        cur = 1;
+      }else{
+        cur = 0;
       }
-      else if ( cur > SDL_MEDIUM_AXIS_VALUE )
-      {
-        menu_layer_->onRawInputEvent(*this, joy_name_and_guid.c_str(), "axis", i, 1);
-      }      
+
+      if( joymap_[joy_name_and_guid][i] == 0x7FFFFFFF ){
+        joymap_[joy_name_and_guid][i] = cur;
+        continue;
+      }
+      if( cur != joymap_[joy_name_and_guid][i] ) {
+	      joymap_[joy_name_and_guid][i] = cur; 
+        menu_layer_->onRawInputEvent(*this, joy_name_and_guid.c_str(), "axis", i, cur);
+      }
     }
-    
     for ( i = 0; i < SDL_JoystickNumHats( joy ); i++ )
     {
       newHatState = SDL_JoystickGetHat( joy, i );
@@ -800,9 +871,13 @@ int InputManager::handleJoyEvents(void) {
       if( i == SWITCH_INVERSE_AIX ){
         cur = SDL_MAX_AXIS_VALUE - cur;
       }
-#endif      
-      PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, (u8)(((int)cur+32768) >> 8));
-      
+#endif
+      if( _analogType[joyId] == 1 ){
+        PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, (u8)(((int)cur+32768) >> 8));
+      }else{
+        PerAxisValue((joyId << 18) | SDL_MEDIUM_AXIS_VALUE | i, (u8)(((int)cur+32768) >> 8)-128 );
+      }
+
       if ( cur < -SDL_MEDIUM_AXIS_VALUE )
       {
         PerKeyUp( (joyId << 18) | SDL_MAX_AXIS_VALUE | i );
@@ -820,6 +895,7 @@ int InputManager::handleJoyEvents(void) {
         PerKeyUp( (joyId << 18) | SDL_MIN_AXIS_VALUE | i );
         PerKeyUp( (joyId << 18) | SDL_MAX_AXIS_VALUE | i );
       }
+
     }
     
     // check buttons
@@ -908,7 +984,7 @@ bool InputManager::parseEventMenu(const SDL_Event& ev ){
           normValue = -1;
       //window->input(getInputConfigByDevice(ev.jaxis.which), Input(ev.jaxis.which, TYPE_AXIS, ev.jaxis.axis, normValue, false));
       InputConfig* cfg = getInputConfigByDevice(ev.jbutton.which);
-      evstr = cfg->getMappedTo(Input(ev.jbutton.which, TYPE_BUTTON, ev.jbutton.button, normValue, false));
+      evstr = cfg->getMappedTo(Input(ev.jbutton.which, TYPE_AXIS, ev.jaxis.axis, normValue, false));
       if( evstr.size() > 0 ){
         menu_layer_->keyboardEvent(evstr[0],0,normValue,0);
       }

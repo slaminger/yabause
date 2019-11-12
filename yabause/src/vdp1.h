@@ -17,6 +17,25 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
 
 #ifndef VDP1_H
 #define VDP1_H
@@ -64,7 +83,7 @@ typedef struct
    const char *Name;
    int (*Init)(void);
    void (*DeInit)(void);
-   void (*Resize)(int,int,unsigned int, unsigned int, int);
+   void (*Resize)(int,int,unsigned int, unsigned int, int, int);
    int (*IsFullscreen)(void);
    // VDP1 specific
    int (*Vdp1Reset)(void);
@@ -118,6 +137,11 @@ void Vdp1FakeDrawCommands(u8 * ram, Vdp1 * regs);
 
 extern Vdp1 * Vdp1Regs;
 
+enum VDP1STATUS {
+  VDP1_STATUS_IDLE = 0,
+  VDP1_STATUS_RUNNING
+};
+
 // struct for Vdp1 part that shouldn't be saved
 typedef struct {
    int disptoggle;
@@ -127,6 +151,7 @@ typedef struct {
    int frame_change_plot;
    int swap_frame_buffer;
    int current_frame;
+   int status;
 } Vdp1External_struct;
 
 extern Vdp1External_struct Vdp1External;

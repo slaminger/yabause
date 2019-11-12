@@ -1,21 +1,23 @@
-/*  Copyright 2018 devMiyax(smiyaxdev@gmail.com)
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
 
 This file is part of YabaSanshiro.
 
-Yabause is free software; you can redistribute it and/or modify
+        YabaSanshiro is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
 
-Yabause is distributed in the hope that it will be useful,
+YabaSanshiro is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
+        You should have received a copy of the GNU General Public License
 along with YabaSanshiro; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+
 #include "MenuScreen.h"
 #include <nanogui/window.h>
 #include <nanogui/layout.h>
@@ -30,24 +32,41 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include <fstream>
 #include <sstream>
 
-#include "InputManager.h"
+#include <experimental/filesystem>
+#include <ctime>
+#include <iomanip>
 
-#define MENU_LOG
-//#define MENU_LOG printf
+#include <nanogui/imageview.h>
+
+namespace fs = std::experimental::filesystem ;
 
 using namespace std;
+
+#include "InputManager.h"
+
+#include "about.h"
+
+#include "Preference.h"
+
+#include "yabause.h"
+
+//#define MENU_LOG
+#define MENU_LOG printf
+
 
 int MenuScreen::onShow(){
   //setupPlayerPsuhButton( 0, player1, "Player1 Input Settings", &p1cb );
   //setupPlayerPsuhButton( 1, player2, "Player2 Input Settings", &p2cb );
 }
 
-MenuScreen::MenuScreen( SDL_Window* pwindow, int rwidth, int rheight, const std::string & fname )
+MenuScreen::MenuScreen( SDL_Window* pwindow, int rwidth, int rheight, const std::string & fname, const std::string & game )
 : nanogui::Screen( pwindow, Eigen::Vector2i(rwidth, rheight), "Menu Screen"){
   
   mFocus = nullptr;
   config_file_ = fname;
+  current_game_path_ = game;
   swindow = nullptr;
+  imageWindow = nullptr;
   std::string title = "Yaba Sanshiro "+ std::string(YAB_VERSION) +" Menu";
         window = new Window(this, title);
         window->setPosition(Vector2i(0, 0));
@@ -65,6 +84,51 @@ MenuScreen::MenuScreen( SDL_Window* pwindow, int rwidth, int rheight, const std:
         tmp.player = new PopupButton(tools, "Player2", ENTYPO_ICON_EXPORT);      
         setupPlayerPsuhButton( 1, tmp.player, "Player2 Input Settings", &tmp.cb );
         player_configs_.push_back(tmp);
+
+       
+        PopupButton * ps_config = new PopupButton(tools, "Config");
+        ps_config->setFixedWidth(248);
+        showConfigDialog(ps_config);
+        ps_config->setCallback([this,ps_config]() {      
+          pushActiveMenu(ps_config->popup(),ps_config); 
+        });
+
+        Button *b0 = new Button(tools, "Exit");
+        b0->setFixedWidth(248);
+        b0->setCallback([this]() { 
+          MENU_LOG("Exit\n"); 
+      		SDL_Event* quit = new SDL_Event();
+			    quit->type = SDL_QUIT;
+			    SDL_PushEvent(quit);  
+        });
+
+        Button *b1 = new Button(tools, "Reset");
+        b1->setFixedWidth(248);
+        b1->setCallback([this]() { 
+          MENU_LOG("Reset\n");  
+          SDL_Event event = {};
+          event.type = reset_;
+          event.user.code = 0;
+          event.user.data1 = 0;
+          event.user.data2 = 0;
+          SDL_PushEvent(&event);          
+        });        
+
+        PopupButton * ps = new PopupButton(tools, "Save State");
+        ps->setFixedWidth(248);
+        ps->setCallback([this,ps]() {      
+          showSaveStateDialog( ps->popup());
+          pushActiveMenu(ps->popup(),ps); 
+        });
+
+        ps = new PopupButton(tools, "Load State");
+        ps->setFixedWidth(248);
+        ps->setCallback([this,ps]() {      
+          showLoadStateDialog( ps->popup());
+          pushActiveMenu(ps->popup(),ps); 
+        });
+
+
 
         bCdTray = new Button(tools, "Open CD Tray");
         bCdTray->setFixedWidth(248);
@@ -101,26 +165,6 @@ MenuScreen::MenuScreen( SDL_Window* pwindow, int rwidth, int rheight, const std:
           }
         });
 
-        Button *b0 = new Button(tools, "Exit");
-        b0->setFixedWidth(248);
-        b0->setCallback([this]() { 
-          MENU_LOG("Exit\n"); 
-      		SDL_Event* quit = new SDL_Event();
-			    quit->type = SDL_QUIT;
-			    SDL_PushEvent(quit);  
-        });
-
-        Button *b1 = new Button(tools, "Reset");
-        b1->setFixedWidth(248);
-        b1->setCallback([this]() { 
-          MENU_LOG("Reset\n");  
-          SDL_Event event = {};
-          event.type = reset_;
-          event.user.code = 0;
-          event.user.data1 = 0;
-          event.user.data2 = 0;
-          SDL_PushEvent(&event);          
-        });
 
         Button *b2 = new Button(tools, "Show/Hide FPS");
         b2->setFixedWidth(248);
@@ -146,25 +190,48 @@ MenuScreen::MenuScreen( SDL_Window* pwindow, int rwidth, int rheight, const std:
           SDL_PushEvent(&event);          
         });        
 
-        //Button *b4 = new Button(tools, "Open CD Tray");
-        //b4->setFixedWidth(120);
-        //b4->setCallback([this]() { printf("test4");  });
-/*
-        bAnalog = new Button(tools, "Switch Pad Mode");
-        bAnalog->setFixedWidth(248);
-        bAnalog->setCallback([this]() { 
-          SDL_Event event = {};
-          event.type = pad_;
-          event.user.code = 0;
-          event.user.data1 = 0;
-          event.user.data2 = 0;
-          SDL_PushEvent(&event);            
+        Button *b4 = new Button(tools, "About");
+        b4->setFixedWidth(248);
+        b4->setCallback([this,b4]() { 
+          int image_pix_size_w = this->width() / 2;
+          int image_pix_size_h = this->height() / 2;
+          imageWindow = new Window(this, "About");                                                                                                         
+          imageWindow->setPosition(Vector2i(0, 0));                                                                                                                   
+          imageWindow->setLayout(new GroupLayout(0,0,0));                                                                                                                     
+          GLTexture t;    
+          t.load(about_png,about_png_size);  
+          float scale = (float)image_pix_size_w / t.width();
+          //float offset = (t.width() - image_pix_size) / 2;
+          auto imageView = new ImageView(imageWindow,t);  
+          imageView->setScale(scale);
+          imageView->setFixedScale(true);
+          imageView->setFixedOffset(true);
+          imageView->setFixedWidth(image_pix_size_w);
+          imageView->setFixedHeight(image_pix_size_h);
+
+          Button *btn = new Button(imageWindow, "Close");
+          btn->setCallback([this]() { 
+            this->popActiveMenu();
+            if( this->imageWindow != nullptr ){
+              this->imageWindow->dispose();
+              this->imageWindow = nullptr;
+            }
+          });
+
+          imageWindow->center();
+          imageWindow->setModal(true);
+          imageWindow->requestFocus();
+
+          pushActiveMenu(imageWindow,b4);
+
         });
-*/
+
         player_configs_[0].player->focusEvent(true);
         player_configs_[0].player->mouseEnterEvent(player_configs_[0].player->absolutePosition(),true);
         mFocus = player_configs_[0].player;
+
         performLayout();
+        
 }
 
 
@@ -186,6 +253,222 @@ inline bool ends_with(std::string const & value, std::string const & ending)
     if (ending.size() > value.size()) return false;
     return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
+
+
+void MenuScreen::showConfigDialog( PopupButton *parent ){
+
+  // Todo setCurrentGamePath
+  std::shared_ptr<Preference> preference(new Preference( current_game_path_ ));
+
+  Popup *popup = parent->popup();    
+  popup->setLayout(new GroupLayout(4,2,2,2)); 
+  new Label(popup, "Resolution");
+  ComboBox * cb = new ComboBox(popup);  
+  vector<string> items;
+  items.push_back("Native");
+  items.push_back("4x");
+  items.push_back("2x");
+  items.push_back("Original");
+  items.push_back("720p");
+  items.push_back("1080p");
+
+  cb->setItems(items);
+  Popup *cbpopup = cb->popup(); 
+  cb->setCallback([this,cbpopup,cb]() {       
+    pushActiveMenu(cbpopup, cb );
+  });
+
+  cb->setSelectedIndex( preference->getInt("Resolution",0) );
+  cb->setCallbackSelect([this,preference]( int idx ) {
+    popActiveMenu();
+    preference->setInt("Resolution",idx);
+    VideoSetSetting(VDP_SETTING_RESOLUTION_MODE, idx);
+  });
+
+  new Label(popup, "Aspect rate");
+  cb = new ComboBox(popup);  
+  items.clear();
+  items.push_back("Original");
+  items.push_back("4:3");
+  items.push_back("16:9");
+  items.push_back("Full Screen");
+  cb->setItems(items);
+  cbpopup = cb->popup(); 
+  cb->setCallback([this,cbpopup,cb]() {       
+    pushActiveMenu(cbpopup, cb );
+  });
+
+  cb->setSelectedIndex( preference->getInt("Aspect rate",0) );
+  cb->setCallbackSelect([this,preference]( int idx ) {
+    popActiveMenu();
+    preference->setInt("Aspect rate",idx);
+  });
+
+  new Label(popup, "Rotate screen resolution");
+  cb = new ComboBox(popup);  
+  items.clear();
+  items.push_back("Original");
+  items.push_back("2x");
+  items.push_back("720p");
+  items.push_back("1080p");
+  items.push_back("Native");
+  cb->setItems(items);
+  cbpopup = cb->popup(); 
+  cb->setCallback([this,cbpopup,cb]() {       
+    pushActiveMenu(cbpopup, cb );
+  });
+
+  cb->setSelectedIndex( preference->getInt("Rotate screen resolution",0) );
+  cb->setCallbackSelect([this,preference]( int idx ) {
+    popActiveMenu();
+    preference->setInt("Rotate screen resolution",idx);
+    VideoSetSetting(VDP_SETTING_RBG_RESOLUTION_MODE, idx);
+  });
+
+
+  Button * ba = new Button(popup,"Use compute shader");  
+  ba->setFlags(Button::ToggleButton); 
+  ba->setPushed( preference->getBool("Use compute shader",false) );
+  ba->setChangeCallback([this,preference](bool state) { 
+    preference->setBool("Use compute shader",state);
+    VideoSetSetting(VDP_SETTING_RBG_USE_COMPUTESHADER, state);
+  });
+
+
+  ba = new Button(popup,"Rotate screen");  
+  ba->setFlags(Button::ToggleButton); 
+  ba->setPushed( preference->getBool("Rotate screen",false) );
+  ba->setChangeCallback([this,preference](bool state) { 
+    preference->setBool("Rotate screen",state);
+    VideoSetSetting(VDP_SETTING_ROTATE_SCREEN, state);
+  });
+
+}
+
+void MenuScreen::showSaveStateDialog( Popup *popup ){
+
+  while (popup->childCount() != 0)
+    popup->removeChild(popup->childCount()-1);
+
+  popup->setLayout(new GroupLayout(4,2,2,2)); 
+
+  for( int i = 0; i< 5; i++ ){
+
+    string title;
+
+    std::stringstream stream;
+
+    stream << "Save Slot ";
+    stream << i;
+
+    std::stringstream img_stream;
+    img_stream << this->cuurent_game_id_;
+    img_stream << i;
+    img_stream << ".yss";
+
+    printf("Checking %s \n", img_stream.str().c_str() );
+    if( fs::exists( img_stream.str() ) ){
+      auto ftime = fs::last_write_time(img_stream.str());
+      namespace chrono = std::chrono;
+      auto sec = chrono::duration_cast<chrono::seconds>(ftime.time_since_epoch());
+      std::time_t t = sec.count();
+      const tm* lt = std::localtime(&t);
+      std::ostringstream ss;
+      stream << "  " << std::put_time(lt, "%c");
+      printf("%s",stream.str().c_str());
+      printf("\n");
+    }
+
+    Button *tmp = new Button(popup, stream.str() );
+    tmp->setCallback([this,i,popup]() { 
+      SDL_Event event = {};
+      event.type = save_state_;
+      event.user.code = i;
+      event.user.data1 = 0;
+      event.user.data2 = 0;
+      SDL_PushEvent(&event);
+      popActiveMenu();
+    });  
+
+
+    tmp->setOnSetFocusCallback([this,i,popup]() {
+      std::stringstream img_stream;
+      img_stream << this->cuurent_game_id_;
+      img_stream << i;
+      img_stream << ".png";
+      cout << img_stream.str();
+      this->setTmpBackGroundImage(img_stream.str());
+    });
+
+    tmp->setOnLeaveCallback([this,i,popup]() {
+      this->setDefalutBackGroundImage();
+    });
+
+  }
+  this->performLayout();
+}
+
+void MenuScreen::showLoadStateDialog( Popup *popup ){
+  while (popup->childCount() != 0)
+    popup->removeChild(popup->childCount()-1);
+
+  popup->setLayout(new GroupLayout(4,2,2,2)); 
+
+  for( int i = 0; i< 5; i++ ){
+
+    string title;
+
+    std::stringstream stream;
+
+    stream << "Load Slot ";
+    stream << i;
+
+    std::stringstream img_stream;
+    img_stream << this->cuurent_game_id_;
+    img_stream << i;
+    img_stream << ".yss";
+
+    printf("Checking %s \n", img_stream.str().c_str() );
+    if( fs::exists( img_stream.str() ) ){
+      auto ftime = fs::last_write_time(img_stream.str());
+      namespace chrono = std::chrono;
+      auto sec = chrono::duration_cast<chrono::seconds>(ftime.time_since_epoch());
+      std::time_t t = sec.count();
+      const tm* lt = std::localtime(&t);
+      std::ostringstream ss;
+      stream << "  " << std::put_time(lt, "%c");
+      printf("%s",stream.str().c_str());
+      printf("\n");
+
+      Button *tmp = new Button(popup, stream.str() );
+      tmp->setCallback([this,i,popup]() { 
+        SDL_Event event = {};
+        event.type = load_state_;
+        event.user.code = i;
+        event.user.data1 = 0;
+        event.user.data2 = 0;
+        SDL_PushEvent(&event);
+        popActiveMenu();
+      });  
+
+      tmp->setOnSetFocusCallback([this,i,popup]() {
+        std::stringstream img_stream;
+        img_stream << this->cuurent_game_id_;
+        img_stream << i;
+        img_stream << ".png";
+        cout << img_stream.str();
+        this->setTmpBackGroundImage(img_stream.str());
+      });
+    
+      tmp->setOnLeaveCallback([this,i,popup]() {
+        this->setDefalutBackGroundImage();
+      });
+    }
+  }
+  this->performLayout();
+
+}
+
 
 void MenuScreen::showFileSelectDialog( Widget * parent, Widget * toback, const std::string & base_path ){
   const int dialog_width = 512;
@@ -211,7 +494,7 @@ void MenuScreen::showFileSelectDialog( Widget * parent, Widget * toback, const s
       while ((ent = readdir (dir)) != NULL) {
         string dname = ent->d_name;
         std::transform(dname.begin(), dname.end(), dname.begin(), ::tolower);
-        if( ends_with(dname, ".cue") || ends_with(dname, ".mdf") || ends_with(dname, ".ccd") ){
+        if( ends_with(dname, ".cue") || ends_with(dname, ".mdf") || ends_with(dname, ".ccd") || ends_with(dname, ".chd") ){
             Button *tmp = new Button(wrapper, ent->d_name );
             string path = base_path + "/" + string(ent->d_name);
             tmp->setCallback([this,path]() { 
@@ -229,7 +512,7 @@ void MenuScreen::showFileSelectDialog( Widget * parent, Widget * toback, const s
             });  
             if( first_object ){
               first_object = false;
-              pushActiveMenu(wrapper,tmp);
+              pushActiveMenu(wrapper,toback);
             }
         }
       }
@@ -240,7 +523,7 @@ void MenuScreen::showFileSelectDialog( Widget * parent, Widget * toback, const s
     Button *b0 = new Button(wrapper, "Cancel");
     if( first_object ){
        first_object = false;
-       pushActiveMenu(wrapper,b0);
+       pushActiveMenu(wrapper,toback);
     }    
     b0->setCallback([this]() { 
       MENU_LOG("Cancel\n"); 
@@ -611,9 +894,9 @@ int MenuScreen::onRawInputEvent( InputManager & imp, const std::string & deviceg
   // wait for key input?
   if( current_key_ != "l" && current_key_ != "r" ) {
     if( current_key_.find("analog") == std::string::npos  ){
-      if( type == "axis" ){
-        return -1;
-      }
+      //if( type == "axis" ){
+      //  return -1;
+      //}
     }else{
       if( type != "axis" ){
         return -1;
@@ -639,9 +922,9 @@ bool MenuScreen::keyboardEvent( std::string & keycode , int scancode, int action
   if( swindow != nullptr && swindow->title() != "Select File"){ return false; }
 
   MENU_LOG("%s %d %d\n",keycode.c_str(),scancode,action);
-  if (action == 1) {
+  if (action != 0) {
           
-    if (keycode == "down") {
+    if ( keycode.find("down") != string::npos ) {
       nanogui::Button* btn = (nanogui::Button*)mFocus;
       //btn->setPushed(false);
       mFocus->mouseEnterEvent(mFocus->position(), false);
@@ -653,7 +936,7 @@ bool MenuScreen::keyboardEvent( std::string & keycode , int scancode, int action
       if( wrapper != nullptr ){
           auto vscroll = wrapper->parent();
           if( vscroll != nullptr && dynamic_cast<VScrollPanel*>(vscroll) != nullptr  ){
-              MENU_LOG("pos=%f vpod = %f\n",mFocus->position().y(),((VScrollPanel*)vscroll)->getScrollPos()  );
+              MENU_LOG("pos=%d vpod = %f\n",mFocus->position().y(),((VScrollPanel*)vscroll)->getScrollPos()  );
               if( mFocus->position().y() - ((VScrollPanel*)vscroll)->getScrollPos() > vscroll->height() ){
                 Vector2i p(0,0);
                 Vector2f rel(0.0,-1.0);
@@ -662,7 +945,7 @@ bool MenuScreen::keyboardEvent( std::string & keycode , int scancode, int action
         }
       }
 
-    }else if (keycode == "up") {
+    }else if ( keycode.find("up") != string::npos ) {
       nanogui::Button* btn = (nanogui::Button*)mFocus;
       //btn->setPushed(false);
       mFocus->mouseEnterEvent(mFocus->position(), false);
@@ -673,7 +956,7 @@ bool MenuScreen::keyboardEvent( std::string & keycode , int scancode, int action
       if( wrapper != nullptr ){
           auto vscroll = wrapper->parent();
           if( vscroll != nullptr ){
-              MENU_LOG("pos=%f vpod = %f\n",mFocus->position().y(),((VScrollPanel*)vscroll)->getScrollPos()  );
+              MENU_LOG("pos=%d vpod = %f\n",mFocus->position().y(),((VScrollPanel*)vscroll)->getScrollPos()  );
               if( mFocus->position().y() - ((VScrollPanel*)vscroll)->getScrollPos() < 0 ){
                 Vector2i p(0,0);
                 Vector2f rel(0.0,1.0);
@@ -704,6 +987,30 @@ void MenuScreen::setBackGroundImage( const std::string & fname ){
   MENU_LOG("imageid_:%d w:%d h:%d\n",imageid_,imgw_,imgh_);
 	imgPaint_ = nvgImagePattern(mNVGContext, 0, 0, imgw_,imgh_, 0, imageid_, 0.5f);
 }
+
+void MenuScreen::setTmpBackGroundImage( const std::string & fname ){
+  if( !fs::exists(fname) ) {
+      setDefalutBackGroundImage();
+      return;
+  }
+
+  if(imageid_tmp_!=0){
+    nvgDeleteImage(mNVGContext,imageid_tmp_);
+  }
+  imageid_tmp_ = nvgCreateImage(mNVGContext, fname.c_str(), 0 );
+  nvgImageSize(mNVGContext, imageid_, &imgw_, &imgh_);
+  MENU_LOG("imageid_:%d w:%d h:%d\n",imageid_,imgw_,imgh_);
+	imgPaint_ = nvgImagePattern(mNVGContext, 0, 0, imgw_,imgh_, 0, imageid_tmp_, 0.5f);
+}
+
+void MenuScreen::setDefalutBackGroundImage(){
+  if(imageid_==0){
+    return;
+  }
+  nvgImageSize(mNVGContext, imageid_, &imgw_, &imgh_);
+	imgPaint_ = nvgImagePattern(mNVGContext, 0, 0, imgw_,imgh_, 0, imageid_, 0.5f);
+}
+
 
 void MenuScreen::draw(NVGcontext *ctx){
 
@@ -803,7 +1110,7 @@ void MenuScreen::pushActiveMenu( Widget *active, Widget * button  ){
 }
 
 void MenuScreen::popActiveMenu(){
-  MENU_LOG("popActiveMenu");
+  MENU_LOG("popActiveMenu ");
   if( menu_stack.size() <= 1 ) return;
   PreMenuInfo tmp;
   tmp = menu_stack.top();
@@ -818,8 +1125,8 @@ void MenuScreen::popActiveMenu(){
     mFocus->requestFocus();
     menu_stack.pop();
   }else{
-    menu_stack.pop();
     tmp = menu_stack.top();
+    /*
     const std::vector<Widget *> &children = tmp.window->children();
     for( int i=0; i<children.size(); i++ ){
       if(  dynamic_cast<Button*>(children[i]) != nullptr ){
@@ -827,12 +1134,22 @@ void MenuScreen::popActiveMenu(){
         if( tmp.button != nullptr ) {
           mFocus->mouseEnterEvent(tmp.button->absolutePosition(),false);
           px->mouseEnterEvent(tmp.button->absolutePosition(),true);
+          MENU_LOG("%s is selected\n",((nanogui::Button*)mFocus)->caption().c_str());
         }
         mFocus = px;
         mFocus->requestFocus();        
         break;
       }
     }
+    */
+    if( tmp.button != nullptr ) {
+      mFocus->mouseEnterEvent(tmp.button->absolutePosition(),false);
+      tmp.button->mouseEnterEvent(tmp.button->absolutePosition(),true);
+      MENU_LOG("%s is selected\n",((nanogui::Button*)tmp.button)->caption().c_str());
+    }
+    mFocus = tmp.button;
+    mFocus->requestFocus();        
+    menu_stack.pop();
   }
   return;
 }
@@ -854,6 +1171,13 @@ int MenuScreen::onBackButtonPressed(){
     swindow->dispose();
     swindow = nullptr;
     return 1;    
+  }
+
+  if( imageWindow != nullptr ){
+    this->popActiveMenu();
+    imageWindow->dispose();
+    imageWindow = nullptr;    
+    return 1;
   }
   
  //if( swindow != nullptr ){ 
@@ -883,3 +1207,4 @@ int MenuScreen::onBackButtonPressed(){
 */  
   return 1;
 }
+

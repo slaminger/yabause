@@ -17,6 +17,25 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
 
 /*! \file cs2.c
     \brief A-bus CS2 emulation functions. Mainly CD-Block code.
@@ -903,6 +922,7 @@ int Cs2ForceCloseTray( int coreid, const char * cdpath ){
 		  return -2;
 	  }
   }
+  Cs2Area->cdi->ReadTOC(Cs2Area->TOC);
   return 0;
 };
 
@@ -975,6 +995,7 @@ void Cs2Exec(u32 timing) {
                case 0:
                   // Sector Read OK
                   Cs2Area->FAD++;
+                  Cs2Area->track = Cs2FADToTrack(Cs2Area->FAD);
                   Cs2Area->cdi->ReadAheadFAD(Cs2Area->FAD);
 
                   if (playpartition != NULL)
@@ -1005,9 +1026,11 @@ void Cs2Exec(u32 timing) {
 
                            if (Cs2Area->playtype == CDB_PLAYTYPE_FILE){
                              Cs2SetIRQ(CDB_HIRQ_EFLS);
+                             Cs2SetIRQ(CDB_HIRQ_EHST); // Need for Assault Leynos 2
                            }
 
                            CDLOG("PLAY HAS ENDED\n");
+
                         }
                         else {
 
@@ -1251,9 +1274,9 @@ void Cs2Execute(void) {
       CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x51:
-      CDLOG("cs2\t: Command: getSectorNumber %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
+      //CDLOG("cs2\t: Command: getSectorNumber %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2GetSectorNumber();
-      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
+      //CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x52:
       CDLOG("cs2\t: Command: calculateActualSize %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
@@ -1566,7 +1589,7 @@ void Cs2InitializeCDSystem(void) {
     Cs2Area->blockfreespace = MAX_BLOCKS;
 
     // initialize TOC
-    memset(Cs2Area->TOC, 0xFF, sizeof(Cs2Area->TOC));
+   // memset(Cs2Area->TOC, 0xFF, sizeof(Cs2Area->TOC));
 
     // clear filesystem stuff
     Cs2Area->curdirsect = 0;
@@ -1699,7 +1722,7 @@ void Cs2PlayDisc(void) {
   pdpmode = Cs2Area->reg.CR3 >> 8;
 
   //CDLOG("[CDB] Command: Play; Start = 0x%06x, End = 0x%06x, Mode = 0x%02x", pdspos, pdepos, pdpmode);
-
+   u32 current_fad = Cs2Area->FAD;
   // Convert Start Position to playFAD
   if (pdspos == 0xFFFFFF || pdpmode == 0xFF) // This still isn't right
   {
@@ -1773,13 +1796,17 @@ void Cs2PlayDisc(void) {
   Cs2SetTiming(1);
 
   Cs2Area->_periodiccycles = 0;
+
+  u32 length = 0;
   // Calculate Seek time
-  int length = abs((int)Cs2Area->playendFAD - (int)Cs2Area->FAD);
-  CDLOG("cs2\t:Seek length = %d", length);
-  Cs2Area->_periodictiming = length * 2000; // seektime
-  if (Cs2Area->_periodictiming > SEEK_TIME) {
-    Cs2Area->_periodictiming = SEEK_TIME;
+  length = abs((int)current_fad - (int)Cs2Area->FAD);
+  Cs2Area->_periodictiming = length; // seektime
+  if (Cs2Area->_periodictiming > (u32)SEEK_TIME) {
+     Cs2Area->_periodictiming = (u32)SEEK_TIME;
   }
+  CDLOG("cs2\t:Seek length = %0d - %d = %d/%d %d\n", (int)current_fad, (int)Cs2Area->FAD, length, SEEK_TIME, Cs2Area->_periodictiming );
+
+  //Cs2Area->_periodictiming = SEEK_TIME;
 
   Cs2Area->status = CDB_STAT_SEEK;      // need to be seek
   Cs2Area->options = 0;
@@ -3967,7 +3994,7 @@ u8 Cs2GetIP(int autoregion) {
    if ((gripartition = Cs2ReadUnFilteredSector(150)) != NULL)
    {
 	   int i;
-      char *buf=(char*)gripartition->block[gripartition->numblocks - 1]->data;
+      unsigned char *buf=(unsigned char*)gripartition->block[gripartition->numblocks - 1]->data;
 
       // Make sure we're dealing with a saturn game
       if (memcmp(buf, "SEGA SEGASATURN", 15) == 0)

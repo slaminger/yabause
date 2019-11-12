@@ -17,6 +17,25 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
 
 /*! \file vidshared.c
     \brief Functions shared between opengl and software video renderers.
@@ -206,6 +225,7 @@ void Vdp2ReadRotationTable(int which, vdp2rotationparameter_struct *parameter, V
    {
       // Rotation Parameter A
       addr &= 0x000FFF7C;
+      parameter->linecoefenab = regs->KTCTL & 0x10;
       parameter->coefenab = regs->KTCTL & 0x1;
       parameter->screenover = (regs->PLSZ >> 10) & 0x3;
    }
@@ -214,6 +234,7 @@ void Vdp2ReadRotationTable(int which, vdp2rotationparameter_struct *parameter, V
       // Rotation Parameter B
       addr = (addr & 0x000FFFFC) | 0x00000080;
       parameter->coefenab = regs->KTCTL & 0x100;
+      parameter->linecoefenab = regs->KTCTL & 0x1000;
       parameter->screenover = (regs->PLSZ >> 14) & 0x3;
    }
 
@@ -278,19 +299,19 @@ void Vdp2ReadRotationTable(int which, vdp2rotationparameter_struct *parameter, V
    addr += 2;
 
    i = T1ReadWord(ram, addr);
-   parameter->Pz = (float) (signed) ((i & 0x3FFF) | (i & 0x2000 ? 0xFFF80000 : 0x00000000));
+   parameter->Pz = (float) (signed) ((i & 0x3FFF) | (i & 0x2000 ? 0xFFFFC000 : 0x00000000));
    addr += 4;
 
    i = T1ReadWord(ram, addr);
-   parameter->Cx = (float) (signed) ((i & 0x3FFF) | (i & 0x2000 ? 0xFFF80000 : 0x00000000));
+   parameter->Cx = (float) (signed) ((i & 0x3FFF) | (i & 0x2000 ? 0xFFFFC000 : 0x00000000));
    addr += 2;
 
    i = T1ReadWord(ram, addr);
-   parameter->Cy = (float) (signed) ((i & 0x3FFF) | (i & 0x2000 ? 0xFFF80000 : 0x00000000));
+   parameter->Cy = (float) (signed) ((i & 0x3FFF) | (i & 0x2000 ? 0xFFFFC000 : 0x00000000));
    addr += 2;
 
    i = T1ReadWord(ram, addr);
-   parameter->Cz = (float) (signed) ((i & 0x3FFF) | (i & 0x2000 ? 0xFFF80000 : 0x00000000));
+   parameter->Cz = (float) (signed) ((i & 0x3FFF) | (i & 0x2000 ? 0xFFFFC000 : 0x00000000));
    addr += 4;
 
    i = T1ReadLong(ram, addr);

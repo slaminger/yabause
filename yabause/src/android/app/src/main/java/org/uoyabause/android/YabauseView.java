@@ -1,5 +1,4 @@
 /*  Copyright 2011-2013 Guillaume Duhamel
-    Copyright 2015-2017 devMiyax(smiyaxdev@gmail.com)
 
     This file is part of Yabause.
 
@@ -15,6 +14,24 @@
 
     You should have received a copy of the GNU General Public License
     along with Yabause; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
+/*  Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+    This file is part of YabaSanshiro.
+
+    YabaSanshiro is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    YabaSanshiro is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with YabaSanshiro; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
@@ -44,14 +61,14 @@ import android.view.View.OnKeyListener;
 public class YabauseView extends SurfaceView implements Callback {
     private static String TAG = "YabauseView";
     private static final boolean DEBUG = false;
-
+/*
     private int axisX = 0;
     private int axisY = 0;
 
     public boolean[] pointers = new boolean[256];
     public int[] pointerX = new int[256];
     public int[] pointerY = new int[256];
-
+*/
     Context _context;
     
     public YabauseView(Context context, AttributeSet attrs) {
@@ -95,9 +112,9 @@ public class YabauseView extends SurfaceView implements Callback {
     public void surfaceDestroyed(SurfaceHolder holder) {
 
     }
-
+/*
     @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-    	
+    	/*
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(_context);
         boolean keep_aspectrate = sharedPref.getBoolean("pref_keepaspectrate", false);
 
@@ -124,5 +141,5 @@ public class YabauseView extends SurfaceView implements Callback {
         	super.onMeasure(widthMeasureSpec,heightMeasureSpec);
         }
     }
-
+*/
 }

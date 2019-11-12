@@ -1,18 +1,19 @@
-/*  Copyright 2018 devMiyax(smiyaxdev@gmail.com)
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
 
 This file is part of YabaSanshiro.
 
-Yabause is free software; you can redistribute it and/or modify
+        YabaSanshiro is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
 
-Yabause is distributed in the hope that it will be useful,
+YabaSanshiro is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
+        You should have received a copy of the GNU General Public License
 along with YabaSanshiro; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
@@ -64,16 +65,20 @@ public:
     std::map<SDL_JoystickID, SDL_Joystick*> joysticks_;
 
     int imageid_ = 0;
+    int imageid_tmp_ = 0;
     int imgw_ = 0;
     int imgh_ = 0;
     NVGpaint imgPaint_ = {};     
     void setBackGroundImage( const std::string & fname );
+    void setTmpBackGroundImage( const std::string & fname );
+    void setDefalutBackGroundImage();
 
     nanogui::Window *window;
     nanogui::Window *swindow;
+    nanogui::Window *imageWindow;
     
     
-    MenuScreen( SDL_Window* pwindow, int rwidth, int rheight, const std::string & fname  );
+    MenuScreen( SDL_Window* pwindow, int rwidth, int rheight, const std::string & fname, const std::string & game  );
     virtual bool keyboardEvent( std::string & keycode , int scancode, int action, int modifiers);
     virtual void draw(NVGcontext *ctx);
 
@@ -101,6 +106,11 @@ public:
     std::string current_game_path_;
     void setCurrentGamePath( const char * path ){ current_game_path_ = path; }
 
+    uint32_t save_state_ = 0;
+    void setSaveStateEventCode( uint32_t code ){ save_state_ = code; }
+
+    uint32_t load_state_ = 0;
+    void setLoadStateEventCode( uint32_t code ){ load_state_ = code; }
 
     void showInputCheckDialog( const std::string & key );
 
@@ -122,6 +132,13 @@ public:
     }
     void getSelectedGUID( int user_index, std::string & selguid );
 
+
+    //void showSaveStateDialog( Widget * parent, Widget * toback );
+    void setCurrentGameId( const std::string & id ){ cuurent_game_id_ = id; }
+    void showSaveStateDialog( Popup *popup );
+    void showLoadStateDialog( Popup *popup );
+    void showConfigDialog( PopupButton *popup );
+
 public:  // events
     int onBackButtonPressed();    
     int onShow();    
@@ -131,5 +148,6 @@ protected:
     std::string current_user_;    
     std::string current_key_; 
     std::string config_file_;
+    std::string cuurent_game_id_;
 
 };

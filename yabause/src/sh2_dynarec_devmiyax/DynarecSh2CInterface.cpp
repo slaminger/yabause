@@ -1,19 +1,20 @@
-/*  Copyright 2017 devMiyax(smiyaxdev@gmail.com)
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
 
-This file is part of Yabause.
+This file is part of YabaSanshiro.
 
-Yabause is free software; you can redistribute it and/or modify
+        YabaSanshiro is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
 
-Yabause is distributed in the hope that it will be useful,
+YabaSanshiro is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with Yabause; if not, write to the Free Software
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
@@ -148,7 +149,7 @@ void SH2DynDeInit(void){
 
 void SH2DynReset(SH2_struct *context) {
 
-  if (context->ext == NULL){
+  if (context->ext == NULL) {
     DynarecSh2 * pctx = new DynarecSh2();
     context->ext = (void*)pctx;
     pctx->SetContext(context);
@@ -162,6 +163,7 @@ void SH2DynReset(SH2_struct *context) {
     pctx->SetSlave(false);
   }
   CompileBlocks * block = CompileBlocks::getInstance();
+  block->Init();
   block->SetDebugMode(false);
   pctx->ResetCPU();
 }
@@ -182,6 +184,7 @@ void SH2DynDebugReset(SH2_struct *context) {
     pctx->SetSlave(false);
   }
   CompileBlocks * block = CompileBlocks::getInstance();
+  block->Init();
   block->SetDebugMode(true);
   pctx->ResetCPU();
 }
@@ -224,7 +227,7 @@ void SH2DynSetInterrupts(SH2_struct *context, int num_interrupts, const interrup
     dIntcTbl tmp;
     tmp.level = interrupts[i].level;
     tmp.Vector = interrupts[i].vector;
-    pctx->m_IntruptTbl.push_back(tmp);
+    pctx->AddInterrupt(interrupts[i].vector, interrupts[i].level );
   }
   return;
 }
@@ -284,7 +287,7 @@ u32 SH2DynGetPC(SH2_struct *context){
 void SH2DynSetRegisters(SH2_struct *context, const sh2regs_struct *regs){
   DynarecSh2 *pctx = (DynarecSh2*)context->ext;
   memcpy(pctx->GetGenRegPtr(), regs->R , sizeof(regs->R));
-  pctx->SET_MACH(regs->GBR);
+  pctx->SET_GBR(regs->GBR);
   pctx->SET_VBR(regs->VBR);
   pctx->SET_SR(regs->SR.all);
   pctx->SET_MACH(regs->MACH);
