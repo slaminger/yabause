@@ -917,7 +917,7 @@ int MenuScreen::onRawInputEvent( InputManager & imp, const std::string & deviceg
   return 0;
 }
 
-bool MenuScreen::keyboardEvent( std::string & keycode , int scancode, int action, int modifiers){
+bool MenuScreen::keyboardEvent( const std::string & keycode , int scancode, int action, int modifiers){
 
   if( swindow != nullptr && swindow->title() != "Select File"){ return false; }
 

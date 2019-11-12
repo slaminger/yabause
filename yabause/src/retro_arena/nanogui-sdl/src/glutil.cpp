@@ -17,7 +17,8 @@
 #define GL_GLEXT_PROTOTYPES 1
 #define GLX_GLXEXT_PROTOTYPES 1
 //#include <EGL/egl.h>
-#include <GLES3/gl32.h>
+//#include <GLES3/gl32.h>
+#include <GL/gl.h>
 
 #if 0
 extern PFNGLCREATESHADERPROC glCreateShader;

@@ -35,8 +35,8 @@ namespace fs = std::experimental::filesystem ;
 
 #include <SDL2/SDL.h>
 #define GL_GLEXT_PROTOTYPES 1
-#include <SDL2/SDL_opengles2.h>
-
+//#include <SDL2/SDL_opengles2.h>
+#include <SDL2/SDL_opengl.h>
 
 extern "C" {
 #include "../config.h"
@@ -57,7 +57,7 @@ extern "C" {
 #include "sndsdl.h"
 #include "osdcore.h"
 #include "ygl.h"
-#include "libpng12/png.h"
+#include "libpng16/png.h"
 }
 
 #include "InputManager.h"
@@ -71,7 +71,7 @@ char s_savepath[256] ="\0";
 
 extern "C" {
 static char biospath[256] = "/home/pigaming/RetroPie/BIOS/saturn/bios.bin";
-static char cdpath[256] = ""; ///home/pigaming/RetroPie/roms/saturn/nights.cue";
+static char cdpath[256] = "/storage/roms/a";
 //static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/gd.cue";
 //static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/Virtua Fighter Kids (1996)(Sega)(JP).ccd";
 static char buppath[256] = "./back.bin";
@@ -237,6 +237,8 @@ int yabauseinit()
   yinit.video_filter_type = 0;
 #if defined(__SWITCH__)  || defined(__JETSON__)
   yinit.polygon_generation_mode = GPU_TESSERATION;
+  yinit.rbg_use_compute_shader = 1;
+  yinit.rbg_resolution_mode = RBG_RES_FIT_TO_EMULATION;
 #else
   yinit.polygon_generation_mode = PERSPECTIVE_CORRECTION;
 #endif  
@@ -245,7 +247,7 @@ int yabauseinit()
   yinit.rotate_screen = pre.getBool( "Rotate screen" , false );
   yinit.scsp_sync_count_per_frame = g_scsp_sync;
   yinit.extend_backup = 1;
-#if defined(__JETSON__)  
+#if defined(__JETSON__) || defined(__SWITCH__)
   yinit.scsp_main_mode = 1;
 #else
   yinit.scsp_main_mode = 0;
@@ -446,6 +448,7 @@ int main(int argc, char** argv)
     event_count = 0;
     while(SDL_PollEvent(&e)) {
       event_count++;
+      //printf("event_count %d\n",event_count);
       if(e.type == SDL_QUIT){
         glClearColor(0.0,0.0,0.0,1.0);
         glClear(GL_COLOR_BUFFER_BIT);        
@@ -587,7 +590,7 @@ int main(int argc, char** argv)
         menu->onEvent( e );
       }
     }
-    inputmng->handleJoyEvents();
+    event_count += inputmng->handleJoyEvents();
 
     if( menu_show ){
 
@@ -596,8 +599,9 @@ int main(int argc, char** argv)
         glClear(GL_COLOR_BUFFER_BIT);
         menu->drawAll();
         SDL_GL_SwapWindow(wnd);
+        //printf("Menu: SDL_GL_SwapWindow %d\n", event_count);
       }else{
-        usleep( 16*1000 );
+        usleep( 16666 );
       }
     }else{
       //printf("\033[%d;%dH Frmae = %d \n", 0, 0, frame_cont);

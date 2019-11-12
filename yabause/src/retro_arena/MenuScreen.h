@@ -20,7 +20,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 #include <SDL2/SDL.h>
 #define GL_GLEXT_PROTOTYPES 1
-#include <SDL2/SDL_opengles2.h>
+//#include <SDL2/SDL_opengles2.h>
+#include <SDL2/SDL_opengl.h>
 #undef Success 
 #include "nanogui/screen.h"
 #include "nanovg.h"
@@ -79,7 +80,7 @@ public:
     
     
     MenuScreen( SDL_Window* pwindow, int rwidth, int rheight, const std::string & fname, const std::string & game  );
-    virtual bool keyboardEvent( std::string & keycode , int scancode, int action, int modifiers);
+    virtual bool keyboardEvent( const std::string & keycode , int scancode, int action, int modifiers);
     virtual void draw(NVGcontext *ctx);
 
 	uint32_t reset_ = 0;

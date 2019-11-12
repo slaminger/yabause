@@ -1,32 +1,32 @@
 {
-  "0_Nintendo Switch Joy-Cons_050000007e0500000620000001000000": {
+  "0_Joy-Con Rails_060000007e0500000820000000010000": {
     "a": {
-      "id": 0,
+      "id": 1,
       "type": "button",
       "value": 1
     },
     "analogleft": {
-      "id": 3,
+      "id": 4,
       "type": "axis",
-      "value": 1
+      "value": 0
     },
     "analogright": {
-      "id": 3,
+      "id": 5,
       "type": "axis",
-      "value": 1
+      "value": 0
     },
     "analogx": {
       "id": 0,
       "type": "axis",
-      "value": 1
+      "value": 0
     },
     "analogy": {
       "id": 1,
       "type": "axis",
-      "value": 1
+      "value": 0
     },
     "b": {
-      "id": 1,
+      "id": 0,
       "type": "button",
       "value": 1
     },
@@ -62,8 +62,8 @@
     },
     "select": {
       "id": 9,
-      "type": "key",
-      "value": 0
+      "type": "button",
+      "value": 1
     },
     "start": {
       "id": 10,
@@ -93,8 +93,8 @@
   },
   "player1": {
     "DeviceID": 0,
-    "deviceGUID": "050000007e0500000620000001000000",
-    "deviceName": "Nintendo Switch Joy-Cons",
+    "deviceGUID": "060000007e0500000820000000010000",
+    "deviceName": "Joy-Con Rails",
     "padmode": 0
   }
 }
