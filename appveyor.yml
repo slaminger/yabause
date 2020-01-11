@@ -46,7 +46,7 @@ init:
 
 before_build:
   - dir "%DXSDK_DIR%/Lib/x86/"
-  - dir "%QT_PATH%/bin/"
+  - dir "%QT_PATH%"
   # fetch appropriate sdl lib for visual studio or mingw
   - cd c:\
   - appveyor DownloadFile https://www.libsdl.org/release/%sdl_filename%
