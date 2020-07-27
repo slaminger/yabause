@@ -449,12 +449,12 @@ int main(int argc, char** argv)
 
   std::string tmpfilename = home_dir + "tmp.png";
 
-  struct sched_param thread_param;
-  thread_param.sched_priority = 15; //sched_get_priority_max(SCHED_FIFO);
-  if ( pthread_setschedparam(pthread_self(), SCHED_FIFO, &thread_param) < -1 ) {
-    LOG("sched_setscheduler");
-  }
-  setpriority( PRIO_PROCESS, 0, -8);
+  //struct sched_param thread_param;
+  //thread_param.sched_priority = 15; //sched_get_priority_max(SCHED_FIFO);
+  //if ( pthread_setschedparam(pthread_self(), SCHED_FIFO, &thread_param) < -1 ) {
+  //  LOG("sched_setscheduler");
+  //}
+  //setpriority( PRIO_PROCESS, 0, -8);
   int frame_cont = 0;
   int event_count = 0;
   while(true) {
