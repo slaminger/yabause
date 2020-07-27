@@ -55,9 +55,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <string>
 
+#if !defined(__PI4__)
 #include <filesystem>
 namespace fs = std::filesystem;
+#endif
 
 #ifdef ARCH_IS_MACOSX
 pid_t gettid(void)
@@ -332,7 +335,7 @@ int YabThreadGetCurrentThreadAffinityMask()
 }
 
 int YabMakeCleanDir( const char * dirname ){
-#if defined(ANDROID)
+#if defined(ANDROID) || defined(__PI4__)
   std::string cmd;
   cmd = "exec rm -r " + std::string(dirname) + "/*";
   system(cmd.c_str());
@@ -348,7 +351,7 @@ int YabMakeCleanDir( const char * dirname ){
 }
 
 int YabCopyFile( const char * src, const char * dst) {
-#if defined(ANDROID)
+#if defined(ANDROID)|| defined(__PI4__)
   std::string cmd;
   cmd = "exec cp -f " + std::string(src) + " " + std::string(dst);
   system(cmd.c_str());

@@ -104,6 +104,7 @@ extern "C" int YabMakeCleanDir(const char * dirname) {
   }
   return 0;
 }
+#elif defined(__PI4__)
 #else
 namespace fs = std::filesystem;
 #endif

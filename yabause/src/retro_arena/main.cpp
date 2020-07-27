@@ -769,3 +769,44 @@ FINISH:
     if(row_pointers) free(row_pointers);
     return rtn;
 }
+
+extern "C" {
+
+  int YabauseThread_IsUseBios() {
+    //if( s_biospath == NULL){
+    //    return 1;
+    //}
+    return 0;
+
+  }
+
+  const char * YabauseThread_getBackupPath() {
+    //return s_buppath;
+    return NULL;
+  }
+
+  void YabauseThread_setUseBios(int use) {
+
+
+  }
+
+  char tmpbakcup[256];
+  void YabauseThread_setBackupPath( const char * buf) {
+      //strcpy(tmpbakcup,buf);
+      //s_buppath = tmpbakcup;
+  }
+
+  void YabauseThread_resetPlaymode() {
+      //if( s_playrecord_path != NULL ){
+      //    free(s_playrecord_path);
+      //    s_playrecord_path = NULL;
+      //}
+      //s_buppath = GetMemoryPath();
+  }
+
+  void YabauseThread_coldBoot() {
+    //YabauseDeInit();
+    //YabauseInit();
+    //YabauseReset();
+  }
+}
