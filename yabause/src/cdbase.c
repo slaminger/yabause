@@ -51,7 +51,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include <assert.h>
 #include <ctype.h>
 #include <wchar.h>
-#include "cdbase.h"
 #include "error.h"
 #include "debug.h"
 
