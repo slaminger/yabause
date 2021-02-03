@@ -157,6 +157,28 @@ else ifneq (,$(findstring rockpro64,$(platform)))
 	ALLOW_POLYGON_MODE = 0
 	FLAGS += -march=armv8-a+crc -mcpu=cortex-a72 -mtune=cortex-a72.cortex-a53 -mfloat-abi=hard -mfpu=neon-vfpv4 -mvectorize-with-neon-quad
 
+#Odroid Go Advnce and Super
+else ifeq ($(platform), goadvance)
+	EXT ?= so
+	TARGET := $(TARGET_NAME)_libretro.$(EXT)
+	SHARED := -shared -Wl,--version-script=link.T
+	fpic = -fPIC
+	LIBS += -lrt
+	CC_AS = gcc
+	FORCE_GLES = 1
+	SINGLE_PREC_FLAGS = 1
+	HAVE_LTCG = 0
+	HAVE_OPENMP = 0
+	CFLAGS += -march=armv8-a+crc+simd -mtune=cortex-a35
+	CFLAGS += -DHOST_CPU=0x20000006 -DTARGET_LINUX_ARMv8 
+	CXXFLAGS += $(CFLAGS)
+	ASFLAGS += $(CFLAGS) -c
+        FLAGS += -DARM
+        ARCH = arm
+        ARCH_IS_LINUX = 1
+        LDFLAGS += -pthread
+        CFLAGS += -march=armv8-a
+	
 # ODROIDs
 else ifeq ($(platform), odroid-n2)
 	override platform += unix
