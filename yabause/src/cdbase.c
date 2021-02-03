@@ -54,7 +54,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include "error.h"
 #include "debug.h"
 
-static int LoadCHD(const char *chd_filename, FILE *iso_file);
 static int ISOCDReadSectorFADFromCHD(u32 FAD, void *buffer);
 static int LoadBinCueMultiFile(const char *cuefilename, FILE *iso_file);
 static int LoadBinCue(const char *cuefilename, FILE *iso_file);
