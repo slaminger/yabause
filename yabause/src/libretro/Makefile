@@ -332,9 +332,6 @@ ifeq ($(__USE_OPENGL_DEBUG__),1)
 	FLAGS += -D__USE_OPENGL_DEBUG__
 endif
 
-ifeq ($(HAVE_SSE),1)
-	FLAGS += -mfpmath=sse
-endif
 
 #ifeq ($(shell expr `gcc -dumpversion | cut -f1` \>= 6.0), 1)
 #	FLAGS += -fno-PIE -no-pie
